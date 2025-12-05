@@ -1,1 +1,3 @@
-keycloak.authenticator.username.UsernameDisableAuthenticationFactory
+keycloak.spi.username_limiter.UsernameDisableAuthenticationFactory
+keycloak.spi.enter_time_logics.EnterTimeAuthenticationFactory
+keycloak.spi.sms_code_otp.SmsAuthenticationFactory

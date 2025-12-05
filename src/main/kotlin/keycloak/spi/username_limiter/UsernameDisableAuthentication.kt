@@ -1,6 +1,6 @@
-package keycloak.authenticator.username
+package keycloak.spi.username_limiter
 
-import keycloak.authenticator.constants.ConfigurationConstants
+import keycloak.spi.constants.Constants
 import org.jboss.logging.Logger
 import org.keycloak.authentication.AuthenticationFlowContext
 import org.keycloak.authentication.AuthenticationFlowError
@@ -21,17 +21,14 @@ class UsernameDisableAuthentication() : Authenticator {
         if (context != null) {
 
             val config = context.authenticatorConfig
-            val session = context.session
             val user = context.user
 
-            logger.info(">>>> Config = $config")
-            logger.info(">>>> Session = $session")
             logger.info(">>>> User = $user")
 
             val username = user?.username
             val disabledUsername =
-                config?.config[ConfigurationConstants.NOT_ALLOWED_USERNAME]?.split("##")
-            val isCheckEnable = config?.config[ConfigurationConstants.CHECK_TOGGLE]?.toBoolean() ?: false
+                config?.config[Constants.BLOCKING_USERNAME_LIST]?.split("##")
+            val isCheckEnable = config?.config[Constants.BLOCKING_SWITCH]?.toBoolean() ?: false
 
             logger.info(">>>> toggle = $isCheckEnable")
             logger.info(">>>> username = $username")
@@ -48,7 +45,7 @@ class UsernameDisableAuthentication() : Authenticator {
                         logger.info(">>>> User login = $username is blocked")
                         context.failureChallenge(
                             AuthenticationFlowError.INVALID_USER,
-                            context.form().setError("User [$username] login blocked by administrator")
+                            context.form().setError("User login \"$username\" blocked by administrator")
                                 .createWebAuthnErrorPage()
                         )
                     } else if (execution.isConditional || execution.isAlternative) {

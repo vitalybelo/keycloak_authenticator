@@ -75,40 +75,6 @@
         </dependency>
     </dependencies>
 
-<!--    <build>-->
-<!--        <plugins>-->
-<!--            <plugin>-->
-<!--                <groupId>org.apache.maven.plugins</groupId>-->
-<!--                <artifactId>maven-shade-plugin</artifactId>-->
-<!--                <version>3.5.0</version>-->
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <phase>package</phase>-->
-<!--                        <goals>-->
-<!--                            <goal>shade</goal>-->
-<!--                        </goals>-->
-<!--                        <configuration>-->
-<!--                            <artifactSet>-->
-<!--                                <includes>-->
-<!--                                    &lt;!&ndash; Убедитесь, что включаются только нужные библиотеки Kotlin &ndash;&gt;-->
-<!--                                    <include>org.jetbrains.kotlin:*</include>-->
-<!--                                </includes>-->
-<!--                            </artifactSet>-->
-<!--                            <relocations>-->
-<!--                                &lt;!&ndash; Перемещаем классы Kotlin в другое пространство имен, чтобы избежать конфликтов &ndash;&gt;-->
-<!--                                <relocation>-->
-<!--                                    <pattern>kotlin</pattern>-->
-<!--                                    <shadedPattern>com.example.keycloak.shaded.kotlin</shadedPattern>-->
-<!--                                </relocation>-->
-<!--                            </relocations>-->
-<!--                            <finalName>your-artifact-name-with-dependencies</finalName>-->
-<!--                        </configuration>-->
-<!--                    </execution>-->
-<!--                </executions>-->
-<!--            </plugin>-->
-<!--        </plugins>-->
-<!--    </build>-->
-
     <build>
         <sourceDirectory>src/main/kotlin</sourceDirectory>
         <plugins>
@@ -160,6 +126,14 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>9</source>
+                    <target>9</target>
+                </configuration>
             </plugin>
         </plugins>
     </build>
