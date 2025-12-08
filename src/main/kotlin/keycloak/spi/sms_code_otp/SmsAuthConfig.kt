@@ -8,7 +8,7 @@ import kotlin.text.toInt
 import kotlin.text.toLong
 
 
-data class SmsAuthDto(
+data class SmsAuthConfig(
 
     var ttl: Long? = null,
     var code: String? = null,
@@ -21,7 +21,7 @@ data class SmsAuthDto(
 ) {
 
     companion object {
-        private val logger = Logger.getLogger(SmsAuthDto::class.java)
+        private val logger = Logger.getLogger(SmsAuthConfig::class.java)
     }
 
     fun isNullOrEmpty(): Boolean =

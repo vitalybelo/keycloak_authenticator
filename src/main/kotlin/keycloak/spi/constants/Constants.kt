@@ -5,6 +5,9 @@ import java.time.format.DateTimeFormatter
 class Constants {
 
     companion object {
+
+        const val NATIVE_ENABLED = "native_enabled"
+
         const val BLOCKING_SWITCH: String = "blocking_switch"
         const val BLOCKING_USERNAME_LIST: String = "blocking_username_list"
 
@@ -20,5 +23,10 @@ class Constants {
         const val SMS_CODE_TTL = "sms_ttl"
         const val SMS_CODE = "code"
         const val SMS_TTL = "ttl"
+
+        const val ATTRIBUTE_NAME = "attribute_name"
+        const val ATTRIBUTE_VALUES = "attribute_value"
+        const val ATTRIBUTE_GROUPS = "attribute_groups_enabled"
+
     }
 }
