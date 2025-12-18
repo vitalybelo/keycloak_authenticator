@@ -104,6 +104,9 @@ class SmsAuthenticationFactory : AuthenticatorFactory {
             .defaultValue(60)
 
             .add().build()
+            .also {
+                logger.info("Initialize configuration properties :: 2FA SMS Authentication")
+            }
     }
 
 

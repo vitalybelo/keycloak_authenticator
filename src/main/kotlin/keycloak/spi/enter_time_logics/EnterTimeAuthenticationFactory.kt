@@ -93,7 +93,7 @@ class EnterTimeAuthenticationFactory : AuthenticatorFactory {
             .add()
             .build()
             .also {
-                logger.info("Initialize configuration properties")
+                logger.info("Initialize configuration properties :: Enter Time Attribute Logic")
             }
     }
 

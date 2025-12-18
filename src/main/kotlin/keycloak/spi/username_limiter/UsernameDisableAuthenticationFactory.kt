@@ -91,7 +91,7 @@ class UsernameDisableAuthenticationFactory : AuthenticatorFactory {
             .add()
             .build()
             .also {
-                logger.info("Initialize configuration properties")
+                logger.info("Initialize configuration properties :: Username Login Blocker Authenticator")
             }
     }
 

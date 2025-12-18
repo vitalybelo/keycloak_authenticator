@@ -83,6 +83,9 @@ class AttributeConditionalFactory : ConditionalAuthenticatorFactory {
             .defaultValue(false)
 
             .add().build()
+            .also {
+                logger.info("Initialize configuration properties :: Condition - check user attribute")
+            }
     }
 
 
