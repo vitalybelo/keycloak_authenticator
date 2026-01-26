@@ -1,6 +1,6 @@
 package keycloak.spi.conditional_attribute
 
-import keycloak.spi.common.AuthenticationUtils
+import keycloak.spi.utils.AuthenticationUtils
 import org.jboss.logging.Logger
 import org.keycloak.authentication.AuthenticationFlowContext
 import org.keycloak.authentication.authenticators.conditional.ConditionalAuthenticator
@@ -19,7 +19,7 @@ class AttributeConditional(): ConditionalAuthenticator {
 
 
     /**
-     * Проверяет наличие у пользователя требуемого атрибута = требуемому значению
+     * Проверяет наличие у пользователя требуемого атрибута и соответствие требуемому значению
      * Вначале из контекста потока извлекаются параметры конфигурации аутентификатора
      * Возвращаемые значения FALSE на этапе проверки:
      * -------------------------------------------------------------------------------
@@ -35,9 +35,12 @@ class AttributeConditional(): ConditionalAuthenticator {
 
         authenticationUtils.contextEnabledOrNull(context) ?: return false
         val user = context!!.user ?: return false
-        val attributeConfig = AttributeAuthConfig(context)
-        if (attributeConfig.isConfigNotPresented()) return false
 
+        val attributeConfig = AttributeAuthConfig(context)
+        if (attributeConfig.isConfigNotPresented()) {
+            logger.error(">>>> CRITICAL :: Authentication config is not presented. >>>>")
+            return false
+        }
         val isNative = attributeConfig.isNative!!
         val expectedAttributeName = attributeConfig.attributeName!!
         val expectedAttributeList = attributeConfig.attributeValues!!

@@ -10,7 +10,7 @@ import kotlin.text.toBoolean
 data class AttributeAuthConfig(
 
     var attributeName: String? = null,
-    var attributeValues: List<String>? = null,
+    var attributeValues: Set<String>? = null,
     var isGroups: Boolean? = null,
     var isNative: Boolean? = null,
 
@@ -23,8 +23,9 @@ data class AttributeAuthConfig(
     constructor(context: AuthenticationFlowContext): this() {
 
         val config: AuthenticatorConfigModel? = context.authenticatorConfig
+
         attributeName = config?.config[Constants.ATTRIBUTE_NAME]
-        attributeValues = config?.config[Constants.ATTRIBUTE_VALUES]?.split("##")
+        attributeValues = config?.config[Constants.ATTRIBUTE_VALUES]?.split("##")?.toSet()
         isGroups = config?.config[Constants.ATTRIBUTE_GROUPS]?.toBoolean() ?: false
         isNative = config?.config[Constants.NATIVE_ENABLED]?.toBoolean() ?: false
 

@@ -10,7 +10,7 @@ import org.keycloak.models.RealmModel
 import org.keycloak.models.UserModel
 
 
-class UsernameDisableAuthentication() : Authenticator {
+class UsernameDisableAuthentication : Authenticator {
 
     companion object {
         private val logger = Logger.getLogger(UsernameDisableAuthentication::class.java)
@@ -25,19 +25,23 @@ class UsernameDisableAuthentication() : Authenticator {
 
             logger.info(">>>> User = $user")
 
-            val username = user?.username
-            val disabledUsername =
-                config?.config[Constants.BLOCKING_USERNAME_LIST]?.split("##")
+            val disabledUsernameList =
+                config?.config[Constants.BLOCKING_USERNAME_LIST]?.split("##")?.toSet() ?: emptySet()
+
+            val username = user?.username ?: ""
             val isCheckEnable = config?.config[Constants.BLOCKING_SWITCH]?.toBoolean() ?: false
 
             logger.info(">>>> toggle = $isCheckEnable")
             logger.info(">>>> username = $username")
-            logger.info(">>>> username disabled = $disabledUsername")
+            logger.info(">>>> username disabled = $disabledUsernameList")
 
             if (isCheckEnable
-                && !disabledUsername.isNullOrEmpty() && !username.isNullOrEmpty()) {
+                && disabledUsernameList.isNotEmpty()
+                && username.isNotEmpty()) {
 
-                if (disabledUsername.contains(username)) {
+                val normalizedDisabledUsernames = disabledUsernameList.map { it.lowercase() }
+                val usernameLowerCase = username.lowercase()
+                if (normalizedDisabledUsernames.contains(usernameLowerCase)) {
 
                     val execution = context.execution
                     if (execution.isRequired) {

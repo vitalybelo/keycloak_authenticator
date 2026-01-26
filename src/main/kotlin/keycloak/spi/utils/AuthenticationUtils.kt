@@ -1,9 +1,7 @@
-package keycloak.spi.common
+package keycloak.spi.utils
 
-import jakarta.ws.rs.core.Response
 import org.jboss.logging.Logger
 import org.keycloak.authentication.AuthenticationFlowContext
-import org.keycloak.authentication.AuthenticationFlowError
 
 class AuthenticationUtils {
 
@@ -19,11 +17,7 @@ class AuthenticationUtils {
     fun contextEnabledOrNull(context: AuthenticationFlowContext?): Boolean? {
 
         if (context == null) {
-            context?.failureChallenge(
-                AuthenticationFlowError.INTERNAL_ERROR,
-                context.form().createErrorPage(Response.Status.INTERNAL_SERVER_ERROR)
-            )
-            logger.warn(">>>> Authentication flow unavailable >>>>")
+            logger.warn(">>>> CRITICAL: Authentication context is null! Cannot proceed. >>>>")
             return null
         }
         return true

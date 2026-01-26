@@ -12,7 +12,7 @@
     <properties>
         <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <kotlin.code.style>official</kotlin.code.style>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>        <kotlin.code.style>official</kotlin.code.style>
         <keycloak.version>26.4.1</keycloak.version>
         <jackson.version>2.18.4</jackson.version>
         <kotlin.version>2.2.0</kotlin.version>

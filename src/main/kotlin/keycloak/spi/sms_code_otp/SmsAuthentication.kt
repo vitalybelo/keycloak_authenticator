@@ -2,7 +2,7 @@ package keycloak.spi.sms_code_otp
 
 import org.jboss.logging.Logger
 import jakarta.ws.rs.core.Response
-import keycloak.spi.common.AuthenticationUtils
+import keycloak.spi.utils.AuthenticationUtils
 import keycloak.spi.constants.Constants
 import org.keycloak.authentication.AuthenticationFlowContext
 import org.keycloak.authentication.AuthenticationFlowError
