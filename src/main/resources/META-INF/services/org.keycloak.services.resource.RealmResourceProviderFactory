@@ -1,1 +1,1 @@
-#keycloak.spi.custom_resources.CustomResourceProviderFactory
+keycloak.spi.custom_resources.CustomResourceProviderFactory
