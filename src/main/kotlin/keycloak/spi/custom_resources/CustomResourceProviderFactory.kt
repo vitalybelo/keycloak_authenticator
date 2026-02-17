@@ -13,8 +13,9 @@ class CustomResourceProviderFactory: RealmResourceProviderFactory {
     }
 
     override fun create(session: KeycloakSession?): RealmResourceProvider? {
-        return if (session == null) null
-                    else CustomResourceProvider(session)
+
+        session ?: return null
+        return CustomResourceProvider(session)
     }
 
     override fun init(config: Config.Scope?) {
