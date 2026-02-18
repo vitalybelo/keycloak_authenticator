@@ -13,7 +13,7 @@ import org.keycloak.models.KeycloakSessionFactory
 class CustomEventListenerProviderFactory : EventListenerProviderFactory {
 
     companion object {
-        const val PROVIDER_ID = "Custom-Event-Listener"
+        const val PROVIDER_ID = "custom-event-listener"
         private val logger = Logger.getLogger(CustomEventListenerProviderFactory::class.java)
     }
 
@@ -22,15 +22,15 @@ class CustomEventListenerProviderFactory : EventListenerProviderFactory {
     }
 
     override fun init(config: Config.Scope?) {
-        logger .info(">>>> INIT >>>> ")
+        logger .info(">>>> INITIALIZED >>>> ")
     }
 
     override fun postInit(sessionFactory: KeycloakSessionFactory?) {
-        logger.info(">>>> POST INIT >>>>")
+        logger.info(">>>> POST INITIALIZED >>>>")
     }
 
     override fun close() {
-        logger.info(">>>> CLOSE >>>>")
+        logger.info(">>>> CLOSED >>>>")
     }
 
     override fun getId(): String {

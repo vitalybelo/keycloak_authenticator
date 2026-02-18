@@ -142,26 +142,25 @@ class CustomAdminResource(
         }
 
         val details = mapOf(
-            "action" to "update_user_attributes",
+            "action" to "update_attributes",
             "payload" to attributes.toString()
             )
         createEvent(userModel, EventType.UPDATE_PROFILE, details)
         adminEventBuilder.resource(ResourceType.USER)
             .operation(OperationType.UPDATE)
             .resourcePath(session.context.uri)
-            .representation(attributes)
-            .detail("update-attributes", attributes.toString())
+            .representation(userModel.attributes)
             .authUser(userModel)
             .realm(realm)
             .success()
 
-        return Response.ok("Update successful").build()
+        return Response.ok(userModel.attributes).build()
     }
 
 
     /**
-     * Выполняет проверку наличия временной блокировки в результате многократно введенных неверных
-     * пар логин/пароль - brute force.
+     * Выполняет проверку наличия временной блокировки в результате многократно неверно введенных
+     * логина или пароля - функционал brute force.
      * @param userId идентификатор пользователя
      */
     @APIResponses(
@@ -225,7 +224,7 @@ class CustomAdminResource(
             .detail("lastFailureIP", failureModel.lastIPFailure ?: "unknown")
             .detail("lastFailure", failureModel.lastFailure.toString())
             .detail("numLoginFailures", failureModel.numFailures.toString())
-            .representation(failureModel.toJsonString())
+            .representation(failureModel)
             .success()
 
         return Response.ok(failureModel.toJsonString()).build()
@@ -289,8 +288,8 @@ class CustomAdminResource(
         session.getProvider(UserCache::class.java)?.evict(realm, userModel)
 
         val details = mapOf(
-            "action" to "LOGOUT",
             "payload" to "userId = $userId",
+            "action" to "LOGOUT"
         )
         createEvent(userModel, EventType.LOGOUT, details)
         adminEventBuilder.resource(ResourceType.USER)
