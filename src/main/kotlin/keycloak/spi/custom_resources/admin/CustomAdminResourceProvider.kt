@@ -15,6 +15,7 @@ class CustomAdminResourceProvider: AdminRealmResourceProvider {
         realmModel: RealmModel,
         adminPermissionEvaluator: AdminPermissionEvaluator,
         adminEventBuilder: AdminEventBuilder
+
     ): Any {
 
         return CustomAdminResource(

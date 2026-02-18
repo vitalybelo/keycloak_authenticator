@@ -28,9 +28,10 @@ class CustomResource(
 
 ): RealmResourceProvider {
 
-    private val logger = LoggerFactory.getLogger(CustomResource::class.java)
+    private val requiredScopes: List<String> = listOf("openid")
+
     companion object {
-        private val requiredScopes: List<String> = listOf("openid")
+        private val logger = LoggerFactory.getLogger(CustomResource::class.java)
     }
 
 

@@ -13,14 +13,11 @@ class CustomResourceProvider(
 
     override fun getResource(): Any {
 
+        val realmModel = session.context.realm
         return CustomResource(
             session,
-            session.context.realm,
-            EventBuilder(
-                session.context.realm,
-                session,
-                session.context.connection
-            )
+            realmModel,
+            EventBuilder(realmModel, session, session.context.connection)
         )
     }
 

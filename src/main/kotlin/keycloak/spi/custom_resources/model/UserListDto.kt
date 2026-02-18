@@ -1,4 +1,4 @@
-package keycloak.spi.custom_resources.admin.model
+package keycloak.spi.custom_resources.model
 
 data class UserListDto (
 
