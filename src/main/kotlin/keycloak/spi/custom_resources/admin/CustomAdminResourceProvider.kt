@@ -1,5 +1,6 @@
 package keycloak.spi.custom_resources.admin
 
+import org.keycloak.events.EventBuilder
 import org.keycloak.models.KeycloakSession
 import org.keycloak.models.RealmModel
 import org.keycloak.services.resources.admin.AdminEventBuilder
@@ -11,18 +12,19 @@ class CustomAdminResourceProvider: AdminRealmResourceProvider {
 
     override fun getResource(
 
-        keycloakSession: KeycloakSession,
-        realmModel: RealmModel,
+        session: KeycloakSession,
+        realm: RealmModel,
         adminPermissionEvaluator: AdminPermissionEvaluator,
         adminEventBuilder: AdminEventBuilder
 
     ): Any {
 
         return CustomAdminResource(
-            keycloakSession,
-            realmModel,
+            session,
+            realm,
             adminPermissionEvaluator,
-            adminEventBuilder
+            adminEventBuilder,
+            EventBuilder(realm, session, session.context.connection),
         )
     }
 

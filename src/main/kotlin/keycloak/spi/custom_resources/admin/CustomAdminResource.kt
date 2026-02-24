@@ -1,15 +1,18 @@
 package keycloak.spi.custom_resources.admin
 
+import jakarta.ws.rs.DELETE
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.PUT
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
+import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
+import keycloak.spi.custom_resources.model.LoginFailureDto
+import keycloak.spi.custom_resources.model.ResponseDto
 import keycloak.spi.custom_resources.model.UserListDto
-import keycloak.spi.jackson_mapper.toJsonString
 import keycloak.spi.jackson_mapper.toPrettyJsonString
 import org.eclipse.microprofile.openapi.annotations.media.Content
 import org.eclipse.microprofile.openapi.annotations.media.Schema
@@ -23,24 +26,21 @@ import org.keycloak.models.RealmModel
 import org.keycloak.models.UserModel
 import org.keycloak.services.resources.admin.AdminEventBuilder
 import org.keycloak.services.resources.admin.fgap.AdminPermissionEvaluator
-import java.util.stream.Collectors
 import org.jboss.logging.Logger
 import org.keycloak.events.EventBuilder
 import org.keycloak.events.EventType
 import org.keycloak.models.cache.UserCache
 import org.keycloak.services.managers.AuthenticationManager
 
-
 class CustomAdminResource(
 
     private val session: KeycloakSession,
     private val realm: RealmModel,
     private val auth: AdminPermissionEvaluator,
-    private val adminEventBuilder: AdminEventBuilder
+    private val adminEventBuilder: AdminEventBuilder,
+    private val eventBuilder: EventBuilder
 
 ) {
-
-    val eventBuilder = EventBuilder(realm, session, session.context.connection)
 
     companion object {
         private val logger = Logger.getLogger(CustomAdminResource::class.java)
@@ -54,33 +54,63 @@ class CustomAdminResource(
     @GET
     @Path("users/list")
     @Produces(MediaType.APPLICATION_JSON)
-    fun getListOfUsers(): Response {
+    fun getListOfUsernames(
+        @QueryParam("page") pageSize: Int,
+        @QueryParam("max") maxCount: Int
+    ): Response {
 
+        val page = if (pageSize == 0) 100 else pageSize
+        val max = if (maxCount == 0) 500_000 else maxCount
+
+        logger.info(">>>> Usernames list procedure started for page = $page, max = $max")
         val userPermissionEvaluator = auth.users()
         userPermissionEvaluator.requireQuery() // требуем роль для запроса
 
-        val userList = session.users()
-            ?.searchForUserStream(realm, mapOf(UserModel.SEARCH to "*"))
-            ?.filter { userModel -> userModel.serviceAccountClientLink == null }
-            ?.map { userModel -> userModel.username}
-            ?.collect(Collectors.toList())
-            ?: return Response.status(Response.Status.NOT_FOUND)
-                .entity("No one users found in realm: ${realm.name}").build()
+        val count = session.users().getUsersCount(realm)
+        if (count <= 0) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(ResponseDto.error("Users absent in realm $realm")).build()
+        }
+        logger.info(">>>> Totally found: $count users")
+        val limit = minOf(count, max)
 
-        val userCount = userList.size
-        logger.info(">>>> Successfully found: $userCount users")
-        val userListDto = UserListDto(userCount, userList)
+        var offset = 0
+        val users = mutableListOf<String>()
+        logger.info(">>>> Start produce with limit = $limit")
+
+        while (users.size < limit) {
+
+            val left = limit - users.size
+            val batch = minOf(left, page)
+
+            val userModels = session.users()
+                .searchForUserStream(realm, emptyMap(), offset, batch)
+                .toList()
+            if (userModels.isEmpty()) break
+
+            val usernames = userModels.filter { it.serviceAccountClientLink == null }.map { it.username }
+            if (usernames.isNotEmpty()) {
+                users.addAll(usernames)
+            }
+
+            if (userModels.size < batch) break
+            offset += batch
+        }
+
+        logger.info(">>>> Successfully found: ${users.size} users in realm: ${realm.name}")
+        val userListDto = UserListDto(users.size, users)
 
         adminEventBuilder.resource(ResourceType.USER)
+            .detail("custom_filter", "find all usernames")
             .resourcePath(session.context.uri)
-            .representation(userList)
-            .authUser(auth.adminAuth().user)
             .operation(OperationType.ACTION)
-            .detail("custom_filter", "find_all_usernames")
+            .authUser(auth.adminAuth()?.user)
             .realm(realm)
             .success()
 
-        return Response.ok(userListDto).build()
+        return Response.ok()
+            .entity(ResponseDto.success("Users found and filtered", userListDto))
+            .build()
     }
 
 
@@ -121,40 +151,46 @@ class CustomAdminResource(
     @Path("users/{userId}/attributes")
     @Produces(MediaType.APPLICATION_JSON)
     fun updateUserAttributes(
-
         @PathParam("userId") userId: String?,
         @RequestBody attributes: Map<String, String?>?
     ): Response {
 
-        if (userId.isNullOrEmpty() || attributes.isNullOrEmpty())
-            return Response.status(Response.Status.BAD_REQUEST).entity("Bad request").build()
+        if (userId.isNullOrBlank() || attributes.isNullOrEmpty()) {
+            return Response
+                .status(Response.Status.BAD_REQUEST)
+                .entity(ResponseDto.error("Bad request userId = $userId, attributes = $attributes")).build()
+        }
+        auth.users().requireManage() // требуем роль управления
 
-        val userPermissionEvaluator = auth.users()
-        userPermissionEvaluator.requireManage() // требуем роль управления
-
-        val userModel = session.users()?.getUserById(realm, userId)
-            ?: return Response.status(Response.Status.NOT_FOUND)
-                .entity("User not found in realm: ${realm.name}").build()
+        val userModel = session.users().getUserById(realm, userId)
+            ?: return Response.status(Response.Status.NOT_FOUND).entity("User not found").build()
 
         attributes.forEach { (key, value) ->
-            val valueString = value ?: ""
-            userModel.setSingleAttribute(key, valueString)
+            if (value.isNullOrBlank()) {
+                userModel.removeAttribute(key)
+            } else {
+                userModel.setSingleAttribute(key, value)
+            }
         }
 
+        val updatedKeys = attributes.keys.joinToString(separator = ",")
         val details = mapOf(
-            "action" to "update_attributes",
+            "action" to "update attributes",
             "payload" to attributes.toString()
             )
         createEvent(userModel, EventType.UPDATE_PROFILE, details)
         adminEventBuilder.resource(ResourceType.USER)
-            .operation(OperationType.UPDATE)
             .resourcePath(session.context.uri)
-            .representation(userModel.attributes)
-            .authUser(userModel)
+            .operation(OperationType.UPDATE)
+            .representation(attributes)
+            .detail("updated_keys", updatedKeys)
+            .authUser(auth.adminAuth()?.user)
             .realm(realm)
             .success()
 
-        return Response.ok(userModel.attributes).build()
+        return Response.ok()
+            .entity(ResponseDto.success("attributes updated", userModel.attributes))
+            .build()
     }
 
 
@@ -200,34 +236,133 @@ class CustomAdminResource(
     @Produces(MediaType.APPLICATION_JSON)
     fun getLoginFailures(@PathParam("userId") userId: String?): Response {
 
-        logger.info(">>>> Received userId = $userId")
-        if (userId.isNullOrEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("Bad request").build()
+        logger.info(">>>> Received request to check login failures for userId = $userId")
+        if (userId.isNullOrBlank()) {
+            return Response
+                .status(Response.Status.BAD_REQUEST)
+                .entity(ResponseDto.error("bad request userId = $userId")).build()
         }
-        val userPermissionEvaluator = auth.users()
-        userPermissionEvaluator.requireQuery() // требуем роль для запроса
+
+        auth.users().requireQuery() // требуем роль для запроса
 
         val userModel = session.users().getUserById(realm, userId)
-            ?: return Response.status(Response.Status.NOT_FOUND).entity("User not found in realm: ${realm.name}").build()
+            ?: return Response
+                .status(Response.Status.NOT_FOUND)
+                .entity(ResponseDto.error("user userId = $userId not found")).build()
 
-        logger.info(">>>> Found user: ${userModel.username}")
+        val username = userModel.username
+        logger.info(">>>> User: \"$username\" found successfully")
         val failureProvider = session.loginFailures()
-        val failureModel = failureProvider?.getUserLoginFailure(realm, userModel.id)
-            ?: return Response.noContent().build()
+        val userFailureModel = failureProvider.getUserLoginFailure(realm, userModel.id)
+            ?: return Response
+                .status(Response.Status.NO_CONTENT)
+                .entity(ResponseDto.success("user $username has no locks")).build()
 
-        logger.info(">>>> Login failures for user: ${userModel.username} found: ${failureModel.toPrettyJsonString()}")
+        val failureModel = LoginFailureDto.fromModel(userFailureModel)
+        logger.info(">>>> Login failures for user \"$username\" found:\n ${failureModel.toPrettyJsonString()}")
 
         adminEventBuilder.resource(ResourceType.USER)
-            .operation(OperationType.ACTION)
             .resourcePath(session.context.uri)
-            .detail("username", userModel.username)
-            .detail("lastFailureIP", failureModel.lastIPFailure ?: "unknown")
+            .operation(OperationType.ACTION)
+            .detail("username", username)
+            .detail("lastFailureIP", failureModel.lastIPFailure)
             .detail("lastFailure", failureModel.lastFailure.toString())
             .detail("numLoginFailures", failureModel.numFailures.toString())
             .representation(failureModel)
+            .authUser(auth.adminAuth()?.user)
+            .realm(realm)
             .success()
 
-        return Response.ok(failureModel.toJsonString()).build()
+        return Response
+            .ok(ResponseDto.success("login failures observed",failureModel))
+            .build()
+    }
+
+
+    /**
+     * Выполняет проверку наличия временной блокировки в результате многократно неверно введенных
+     * логина или пароля - функционал brute force.
+     * @param userId идентификатор пользователя
+     */
+    @APIResponses(
+        APIResponse(
+            responseCode = "200",
+            description = "Login failures deleted",
+            content = [Content(schema = Schema(implementation = Response::class))]
+        ),
+        APIResponse(
+            responseCode = "401",
+            description = "Unauthorized",
+            content = [Content(schema = Schema(implementation = Response::class))]
+        ),
+        APIResponse(
+            responseCode = "403",
+            description = "Forbidden to query realm",
+            content = [Content(schema = Schema(implementation = Response::class))]
+        ),
+        APIResponse(
+            responseCode = "400",
+            description = "Bad request, userId is invalid",
+            content = [Content(schema = Schema(implementation = Response::class))]
+        ),
+        APIResponse(
+            responseCode = "404",
+            description = "User not found",
+            content = [Content(schema = Schema(implementation = Response::class))]
+        ),
+        APIResponse(
+            responseCode = "204",
+            description = "Gone, user login failures absent",
+            content = [Content(schema = Schema(implementation = Response::class))]
+        )
+    )
+    @DELETE
+    @Path("users/{userId}/login-failures")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun deleteLoginFailures(@PathParam("userId") userId: String?): Response {
+
+        logger.info(">>>> Received request to unlock userId = $userId")
+        if (userId.isNullOrBlank()) {
+            return Response
+                .status(Response.Status.BAD_REQUEST)
+                .entity(ResponseDto.error("bad request userId = $userId")).build()
+        }
+
+        auth.users().requireManage() // требуем роль для управления
+
+        val userModel = session.users().getUserById(realm, userId)
+            ?: return Response
+                .status(Response.Status.NOT_FOUND)
+                .entity(ResponseDto.error("user by userId = $userId not found")).build()
+
+        logger.info(">>>> User: ${userModel.username} found successfully")
+
+        val failureProvider = session.loginFailures()
+        failureProvider.getUserLoginFailure(realm, userModel.id)
+            ?: return Response
+                .status(Response.Status.NO_CONTENT)
+                .entity(ResponseDto.success("user userId = $userId has no locks")).build()
+
+        failureProvider.removeUserLoginFailure(realm, userModel.id)
+        logger.info(">>>> User ${userModel.username} has been successfully unlocked")
+
+        val details = mapOf(
+            "action" to "UNLOCK_USER",
+            "userId" to userModel.id
+        )
+        createEvent(userModel, EventType.UPDATE_PROFILE, details)
+        adminEventBuilder.resource(ResourceType.USER)
+            .resourcePath(session.context.uri)
+            .operation(OperationType.ACTION)
+            .detail("username", userModel.username)
+            .detail("action", "UNLOCK_USER")
+            .authUser(auth.adminAuth()?.user)
+            .realm(realm)
+            .success()
+
+        return Response
+            .ok(ResponseDto.success("user: ${userModel.username} unlocked successfully"))
+            .build()
     }
 
 
@@ -268,17 +403,18 @@ class CustomAdminResource(
     @Produces(MediaType.APPLICATION_JSON)
     fun logout(@PathParam("userId") userId: String?): Response {
 
-        logger.info(">>>> Received userId = $userId")
+        logger.info(">>>> Received request with userId = $userId")
         if (userId.isNullOrEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("Bad request").build()
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(ResponseDto.error("bad request userId = $userId")).build()
         }
         logger.info(">>>> Start check rights to manage Logout ")
-        val userPermissionEvaluator = auth.users()
-        userPermissionEvaluator.requireManage() // требуем роль для управления
+        auth.users().requireManage() // требуем роль для управления
 
         // проверяем наличие пользователя в keycloak, переданного по userId
         val userModel = session.users().getUserById(realm, userId)
-            ?: return Response.status(Response.Status.NOT_FOUND).entity("User not found").build()
+            ?: return Response.status(Response.Status.NOT_FOUND)
+                .entity(ResponseDto.error("user with id = $userId not found")).build()
 
         // завершаем все текущие сессии пользователя для рабочей области realm
         session.sessions().getUserSessionsStream(realm, userModel)?.forEach { userSession ->
@@ -295,13 +431,16 @@ class CustomAdminResource(
         adminEventBuilder.resource(ResourceType.USER)
             .operation(OperationType.ACTION)
             .resourcePath(session.context.uri)
-            .detail("username", userModel.username)
             .detail("clientId", session.context.client.clientId)
+            .detail("username", userModel.username)
             .detail("realm", realm.name)
             .detail("action", "LOGOUT")
+            .authUser(auth.adminAuth()?.user)
+            .realm(realm)
             .success()
 
-        return Response.ok("successfully logged out").build()
+        return Response.ok()
+            .entity(ResponseDto.success("user logged out from all sessions")).build()
     }
 
 
@@ -316,17 +455,14 @@ class CustomAdminResource(
         details: Map<String, String>?
     ) {
         try {
-            val userSession =
-                session.sessions().getUserSessionsStream(realm, userModel).findAny()
-
             eventBuilder.event(eventType)
                 .realm(realm)
                 .user(userModel)
                 .client(session.context.client)
                 .ipAddress(session.context.connection.remoteAddr)
 
-            if (userSession.isPresent) {
-                eventBuilder.session(userSession.get())
+            session.context.userSession?.let { userSessionModel ->
+                eventBuilder.session(userSessionModel)
             }
             details?.forEach { (key, value) ->
                 eventBuilder.detail(key, value)

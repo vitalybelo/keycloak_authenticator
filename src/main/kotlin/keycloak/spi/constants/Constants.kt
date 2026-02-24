@@ -28,5 +28,11 @@ class Constants {
         const val ATTRIBUTE_VALUES = "attribute_value"
         const val ATTRIBUTE_GROUPS = "attribute_groups_enabled"
 
+        const val BRUTE_FORCE_CACHE ="loginFailures"
+        const val BRUTE_FORCE_SWITCH ="brute_force_switch"
+        const val BRUTE_FORCE_COUNT ="5"
+        const val BRUTE_FORCE_BLOCK_MINUTES = "15"
+        const val BRUTE_FORCE_RESET_MINUTES = "120"
+
     }
 }

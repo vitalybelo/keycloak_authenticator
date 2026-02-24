@@ -23,8 +23,6 @@ class UsernameDisableAuthentication : Authenticator {
             val config = context.authenticatorConfig
             val user = context.user
 
-            logger.info(">>>> User = $user")
-
             val disabledUsernameList =
                 config?.config[Constants.BLOCKING_USERNAME_LIST]?.split("##")?.toSet() ?: emptySet()
 
