@@ -28,11 +28,23 @@ class Constants {
         const val ATTRIBUTE_VALUES = "attribute_value"
         const val ATTRIBUTE_GROUPS = "attribute_groups_enabled"
 
+        const val BRUTE_FORCE_ID = "brute_force_locker"
         const val BRUTE_FORCE_CACHE ="loginFailures"
-        const val BRUTE_FORCE_SWITCH ="brute_force_switch"
-        const val BRUTE_FORCE_COUNT ="5"
-        const val BRUTE_FORCE_BLOCK_MINUTES = "15"
-        const val BRUTE_FORCE_RESET_MINUTES = "120"
 
+        const val BF_CONFIG_SWITCH_KEY = "brute_force_switch"
+        const val BF_CONFIG_SWITCH_VALUE = true
+
+        const val BF_CONFIG_MAX_FAILURES_KEY = "max_failures"
+        const val BF_CONFIG_MAX_FAILURES_VALUE = 5
+
+        const val BF_CONFIG_BLOCK_MINUTES_KEY = "block_minutes"
+        const val BF_CONFIG_BLOCK_MINUTES_VALUE = 10L
+
+        const val BF_CONFIG_RESET_MINUTES_KEY = "reset_minutes"
+        const val BF_CONFIG_RESET_MINUTES_VALUE = 120L
+
+        const val UNKNOWN_REALM = "unknown_realm"
+        const val UNKNOWN_USER = "unknown_user"
+        const val ANONYMOUS = "anonymous"
     }
 }

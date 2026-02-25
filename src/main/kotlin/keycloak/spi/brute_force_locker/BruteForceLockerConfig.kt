@@ -1,40 +1,67 @@
 package keycloak.spi.brute_force_locker
 
 import keycloak.spi.constants.Constants
+import org.jboss.logging.Logger
 import org.keycloak.authentication.AuthenticationFlowContext
 
 data class BruteForceLockerConfig(
 
     val isSwitchedOn: Boolean,
     val failureNumbers: Int,
-    val blockingInMinutes: Int,
-    val finalResetInMinutes: Int,
+    val blockDurationMinutes: Long,
+    val resetDurationMinutes: Long,
     val isRequired: Boolean,
-    val username: String?,
-    val realmId: String?,
-    val userId: String?
+    val username: String,
+    val realmId: String,
+    val userId: String,
+    val cacheKey: String
 
 ) {
     companion object {
 
+        private val logger = Logger.getLogger(BruteForceLockerConfig::class.java)
+
         fun init(context: AuthenticationFlowContext): BruteForceLockerConfig {
 
-            val config = context.authenticatorConfig
-            return BruteForceLockerConfig(
+            val realmId = context.realm?.id ?: Constants.UNKNOWN_REALM
+            val userId = context.user?.id ?: Constants.UNKNOWN_USER
+            val username = context.user?.username ?: Constants.ANONYMOUS
+            val cacheKey = "bf:$realmId:$userId"
 
-                isSwitchedOn = config?.config[Constants.BRUTE_FORCE_SWITCH]?.toBoolean() ?: true,
-                failureNumbers = config?.config?.get(Constants.BRUTE_FORCE_COUNT)?.toInt() ?: 0,
-                blockingInMinutes = config?.config?.get(Constants.BRUTE_FORCE_BLOCK_MINUTES)?.toInt() ?: 5,
-                finalResetInMinutes = config?.config?.get(Constants.BRUTE_FORCE_RESET_MINUTES)?.toInt() ?: 120,
+            val config = context.authenticatorConfig
+            val bruteForceLockerConfig = BruteForceLockerConfig(
+
+                isSwitchedOn = config?.config[Constants.BF_CONFIG_SWITCH_KEY]?.toBoolean() ?: Constants.BF_CONFIG_SWITCH_VALUE,
+                failureNumbers = config?.config?.get(Constants.BF_CONFIG_MAX_FAILURES_KEY)?.toInt() ?: Constants.BF_CONFIG_MAX_FAILURES_VALUE,
+                blockDurationMinutes = config?.config?.get(Constants.BF_CONFIG_BLOCK_MINUTES_KEY)?.toLong() ?: Constants.BF_CONFIG_BLOCK_MINUTES_VALUE,
+                resetDurationMinutes = config?.config?.get(Constants.BF_CONFIG_RESET_MINUTES_KEY)?.toLong() ?: Constants.BF_CONFIG_RESET_MINUTES_VALUE,
                 isRequired = context.execution?.isRequired ?: true,
-                username = context.user?.username,
-                realmId = context.realm?.id,
-                userId = context.user?.id,
+                username = username,
+                realmId = realmId,
+                userId = userId,
+                cacheKey = cacheKey
             )
+
+            logger.debug(""">>>> 
+                | Authentication start with config
+                | ---------------------------------------------------------------------
+                | User = $username 
+                | Cache key = $cacheKey
+                |
+                | isSwitchedOn = ${bruteForceLockerConfig.isSwitchedOn}
+                | failureNumbers = ${bruteForceLockerConfig.failureNumbers}
+                | blockDurationMinutes = ${bruteForceLockerConfig.blockDurationMinutes}
+                | resetDurationMinutes = ${bruteForceLockerConfig.resetDurationMinutes}
+                | isRequired = ${bruteForceLockerConfig.isRequired}
+                | ---------------------------------------------------------------------
+            """.trimIndent()
+            )
+            return bruteForceLockerConfig
         }
     }
 
-    fun isConfigured() = (this.realmId != null && this.userId != null) && isSwitchedOn && isRequired
+    fun isConfigured() =
+        (this.realmId != Constants.UNKNOWN_REALM && this.userId != Constants.UNKNOWN_USER)
+            && isSwitchedOn && isRequired
 
-    fun cacheKey(): String = "bf:${this.realmId}:${this.userId}"
 }

@@ -1,10 +1,7 @@
 package keycloak.spi.brute_force_locker
 
 import com.google.auto.service.AutoService
-import keycloak.spi.constants.Constants.Companion.BRUTE_FORCE_BLOCK_MINUTES
-import keycloak.spi.constants.Constants.Companion.BRUTE_FORCE_COUNT
-import keycloak.spi.constants.Constants.Companion.BRUTE_FORCE_RESET_MINUTES
-import keycloak.spi.constants.Constants.Companion.BRUTE_FORCE_SWITCH
+import keycloak.spi.constants.Constants
 import org.jboss.logging.Logger
 import org.keycloak.Config
 import org.keycloak.authentication.Authenticator
@@ -24,7 +21,7 @@ import org.keycloak.provider.ProviderConfigurationBuilder
 class BruteForceLockerAuthenticationFactory : AuthenticatorFactory {
 
     companion object {
-        private const val PROVIDER_ID = "brute_force_locker"
+        private const val PROVIDER_ID = Constants.BRUTE_FORCE_ID
         private val logger = Logger.getLogger(BruteForceLockerAuthenticationFactory::class.java)
     }
 
@@ -37,7 +34,6 @@ class BruteForceLockerAuthenticationFactory : AuthenticatorFactory {
     }
 
     override fun postInit(sessionFactory: KeycloakSessionFactory) {
-        logger.info(">>>> POST INIT >>>>")
     }
 
     override fun close() {
@@ -62,35 +58,35 @@ class BruteForceLockerAuthenticationFactory : AuthenticatorFactory {
     override fun getConfigProperties(): List<ProviderConfigProperty?>? {
         return ProviderConfigurationBuilder.create()
             .property()
-            .name(BRUTE_FORCE_SWITCH)
+            .name(Constants.BF_CONFIG_SWITCH_KEY)
             .label("Brute force switch")
             .type(ProviderConfigProperty.BOOLEAN_TYPE)
             .helpText("Если \"ON\" - будет выполняться проверка на количество ошибок входа")
-            .defaultValue(true)
+            .defaultValue(Constants.BF_CONFIG_SWITCH_VALUE)
             .add()
 
             .property()
-            .name(BRUTE_FORCE_COUNT)
-            .label("Maximum login error count")
+            .name(Constants.BF_CONFIG_MAX_FAILURES_KEY)
+            .label("Login errors max count")
             .type(ProviderConfigProperty.INTEGER_TYPE)
             .helpText("После скольких ошибок входа, блокировать пользователя")
-            .defaultValue(5)
+            .defaultValue(Constants.BF_CONFIG_MAX_FAILURES_VALUE)
             .add()
 
             .property()
-            .name(BRUTE_FORCE_BLOCK_MINUTES)
+            .name(Constants.BF_CONFIG_BLOCK_MINUTES_KEY)
             .label("Maximum period of blocking in minutes")
             .type(ProviderConfigProperty.INTEGER_TYPE)
             .helpText("Максимальное время, на которое блокируется пользователь")
-            .defaultValue(5)
+            .defaultValue(Constants.BF_CONFIG_BLOCK_MINUTES_VALUE)
             .add()
 
             .property()
-            .name(BRUTE_FORCE_RESET_MINUTES)
+            .name(Constants.BF_CONFIG_RESET_MINUTES_KEY)
             .label("Reset time in minutes")
             .type(ProviderConfigProperty.INTEGER_TYPE)
             .helpText("Время в минутах, в течение которого сбрасываются разовые ошибки")
-            .defaultValue(120)
+            .defaultValue(Constants.BF_CONFIG_RESET_MINUTES_VALUE)
 
             .add()
             .build()

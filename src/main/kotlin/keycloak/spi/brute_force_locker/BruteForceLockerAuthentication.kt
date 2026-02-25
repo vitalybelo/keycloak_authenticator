@@ -10,7 +10,6 @@ import org.keycloak.connections.infinispan.InfinispanConnectionProvider
 import org.keycloak.models.KeycloakSession
 import org.keycloak.models.RealmModel
 import org.keycloak.models.UserModel
-import java.util.concurrent.TimeUnit
 
 
 class BruteForceLockerAuthentication: Authenticator {
@@ -23,36 +22,22 @@ class BruteForceLockerAuthentication: Authenticator {
 
         if (context == null) return
 
-        val config = BruteForceLockerConfig.init(context)
-        if (config.isConfigured()) {
+        logger.debug(">>>> Brute force locker authentication started >>>>")
+        val lockerConfig = BruteForceLockerConfig.init(context)
+        if (lockerConfig.isConfigured()) {
 
-            val cacheKey = config.cacheKey()
-            logger.info("User = \"${config.username}\"")
-            logger.info("UserId = \"${config.userId}\"")
-            logger.info("RealmId = \"${config.realmId}\"")
-            logger.info("CacheKey = \"$cacheKey\"")
-
+            logger.debug(">>>> Brute force locker  authentication configured >>>>")
             val provider = context.session.getProvider(InfinispanConnectionProvider::class.java)
             val cache = provider.getCache<String, LoginAttempt>(BRUTE_FORCE_CACHE)
 
-            val userLoginAttempt = cache[cacheKey]
-            if (userLoginAttempt != null) {
-                logger.info("UserLoginAttempt = ${userLoginAttempt.failures}")
-                logger.info("UserLoginAttempt = ${userLoginAttempt.isBlocked}")
+            val attempt = cache[lockerConfig.cacheKey]
+            if (attempt != null) {
 
-                if (userLoginAttempt.isBlocked) {
-                    val remainingMillis = (userLoginAttempt.unlockTime ?: 0L) - System.currentTimeMillis()
-                    if (remainingMillis > 0) {
-                        val minutes = TimeUnit.MILLISECONDS.toMinutes(remainingMillis)
-                        val seconds = TimeUnit.MILLISECONDS.toSeconds(remainingMillis) % 60
-                        val timeMessage = if (minutes > 0) {
-                            "$minutes мин. $seconds сек."
-                        } else {
-                            "$seconds сек."
-                        }
+                attempt.displayLoginAttempts()
+                if (attempt.isBlocked) {
 
-                        logger.warn("Вход заблокирован для ${config.username} на $timeMessage мин")
-                    }
+                    // выводим сообщение о блокировке
+                    attempt.displayBlockedMessage(lockerConfig)
 
                     val challenge = context.form()
                         .setError("User is temporarily blocked due to too many failed login attempts. Please try again later.")

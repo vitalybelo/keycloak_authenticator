@@ -1,5 +1,7 @@
 package keycloak.spi.event_listener
 
+import keycloak.spi.brute_force_locker.BruteForceConfig
+import keycloak.spi.constants.Constants
 import keycloak.spi.constants.Constants.Companion.BRUTE_FORCE_CACHE
 import keycloak.spi.jackson_mapper.toJsonString
 import org.jboss.logging.Logger
@@ -13,12 +15,7 @@ import java.util.concurrent.TimeUnit
 
 
 class CustomEventListenerProvider(
-
-    private val session: KeycloakSession?,
-    private val maxFailures: Int,
-    private val blockDurationMinutes: Long,
-    private val resetDurationMinutes: Long
-
+    private val session: KeycloakSession
 ): EventListenerProvider {
 
     companion object {
@@ -31,10 +28,10 @@ class CustomEventListenerProvider(
      */
     override fun onEvent(event: Event?) {
 
-        val realmName: String = session?.context?.realm?.name ?: "upstream"
+        val realmName: String = session.context?.realm?.name ?: "upstream"
         if (event != null) {
 
-            bruteForceRegistrator(event)
+            bruteForceDetector(event)
             logger.info(">>>> onEvent: ${event.type} in realm: $realmName")
             logger.info(">>>> Event JSON = ${event.toJsonString()}\n")
         }
@@ -47,7 +44,6 @@ class CustomEventListenerProvider(
      * @param includeRepresentation флаг наличия representation
      */
     override fun onEvent(
-
         adminEvent: AdminEvent?,
         includeRepresentation: Boolean
     ) {
@@ -69,7 +65,6 @@ class CustomEventListenerProvider(
     }
 
     override fun close() {
-        logger.debug(">>>> CLOSED >>>>>")
     }
 
 
@@ -77,30 +72,22 @@ class CustomEventListenerProvider(
      * Выполняет регистрацию событий неправильного ввода логина или пароля (улучшенный brute force)
      * @param event пользовательское событие
      */
-    private fun bruteForceRegistrator(event: Event) {
+    private fun bruteForceDetector(event: Event) {
 
-        if (session == null) return
         if (event.type != EventType.LOGIN_ERROR) return
 
-        val realmId = event.realmId
-        val userId = event.userId
-        if (userId == null || realmId == null) return
-
-        val cacheKey = "bf:$realmId:$userId"
+        val config = bruteForceConfiguration()
+        val cacheKey = "bf:${event.realmId}:${event.userId}"
 
         val provider = session.getProvider(InfinispanConnectionProvider::class.java)
         val cache = provider.getCache<String, LoginAttempt>(BRUTE_FORCE_CACHE)
 
         val updatedAttempt = cache.compute(cacheKey) { _, currentAttempt ->
             val newFailures = (currentAttempt?.failures ?: 0) + 1
-            val isNowBlocked = newFailures >= maxFailures
-            val unlockTimeMillis =
-                (System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(blockDurationMinutes))
-                .takeIf { isNowBlocked }
             LoginAttempt(
                 failures = newFailures,
-                isBlocked = isNowBlocked,
-                unlockTime = unlockTimeMillis
+                isBlocked = newFailures >= config.maxFailures,
+                lastFailure = System.currentTimeMillis()
             )
         }
 
@@ -108,24 +95,74 @@ class CustomEventListenerProvider(
         if (updatedAttempt != null) {
             if (updatedAttempt.isBlocked) {
                 logger.info(""">>>>
-                        | Блокировка на $blockDurationMinutes минут, после ${updatedAttempt.failures} попыток: 
-                        | Пользователь = $userId
+                        | Блокировка на ${config.blockDurationMinutes} минут, после ${updatedAttempt.failures} попыток: 
+                        | Пользователь = ${event.userId}
                         | cacheKey = $cacheKey 
                         """.trimIndent()
                 )
                 // ставим время жизни записи, равное времени блокировки
-                cache.put(cacheKey, updatedAttempt, blockDurationMinutes, TimeUnit.MINUTES)
+                cache.put(cacheKey, updatedAttempt, config.blockDurationMinutes, TimeUnit.MINUTES)
             } else {
                 logger.info(""">>>>
-                        | Ошибка входа:
-                        | Пользователь = $userId
+                        | Ошибка входа, сброс ошибок через ${config.resetDurationMinutes} минут:
+                        | Пользователь = ${event.userId}
                         | Попытка = ${updatedAttempt.failures}
                      """.trimIndent()
                 )
-                // окно накопления ошибок (например, 1 час), если блокировки еще нет
-                cache.put(cacheKey, updatedAttempt, resetDurationMinutes, TimeUnit.MINUTES)
+                // окно накопления ошибок, если блокировки еще нет, но счетчик уже есть
+                cache.put(cacheKey, updatedAttempt, config.resetDurationMinutes, TimeUnit.MINUTES)
             }
         }
+    }
+
+
+    /**
+     * Ищет среди зарегистрированных аутентификаторов рабочей области, кастомный brute_force_id.
+     * Если находит, читает его настройки, инициализирует экземпляр класса BruteForceConfig и завершает работу.
+     * Если не находит, возвращает дефолтные настройки hardcoded
+     * @return экземпляр класса BruteForceConfig кастомных настроек
+     */
+    fun bruteForceConfiguration(): BruteForceConfig {
+
+        val realm = session.context?.realm ?: return BruteForceConfig()
+
+        // ищем настроенный шаг (execution) в любом Flow, который использует наш аутентификатор
+        val execution = realm.authenticationFlowsStream
+            .flatMap { flow -> realm.getAuthenticationExecutionsStream(flow.id) }
+            .filter { it.authenticator == Constants.BRUTE_FORCE_ID }
+            .findFirst()
+            .orElse(null)
+
+        if (execution == null || execution.authenticatorConfig == null) {
+            logger.warn("Brute force authenticator is not configured in this realm.")
+            return BruteForceConfig()
+        }
+
+        val configModel = realm.getAuthenticatorConfigById(execution.authenticatorConfig)
+        if (configModel == null) {
+            logger.warn("Configuration model for brute force not found.")
+            return BruteForceConfig()
+        }
+
+        val configMap = configModel.config
+        val isSwitchedOn = configMap[Constants.BF_CONFIG_SWITCH_KEY]?.toBoolean() ?: Constants.BF_CONFIG_SWITCH_VALUE
+        val maxFailures = configMap[Constants.BF_CONFIG_MAX_FAILURES_KEY]?.toInt() ?: Constants.BF_CONFIG_MAX_FAILURES_VALUE
+        val blockMinutes = configMap[Constants.BF_CONFIG_BLOCK_MINUTES_KEY]?.toLong() ?: Constants.BF_CONFIG_BLOCK_MINUTES_VALUE
+        val resetMinutes = configMap[Constants.BF_CONFIG_RESET_MINUTES_KEY]?.toLong() ?: Constants.BF_CONFIG_RESET_MINUTES_VALUE
+
+        logger.debug(""">>>> Brute force configuration found
+            | isSwitchedOn = $isSwitchedOn
+            | maxFailures = $maxFailures
+            | blockDurationMinutes = $blockMinutes
+            | resetDurationMinutes = $resetMinutes
+        """.trimIndent()
+        )
+        return BruteForceConfig(
+            isSwitchedOn = isSwitchedOn,
+            maxFailures = maxFailures,
+            blockDurationMinutes = blockMinutes,
+            resetDurationMinutes = resetMinutes
+        )
     }
 
 }

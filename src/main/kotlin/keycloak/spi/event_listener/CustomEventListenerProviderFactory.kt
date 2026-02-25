@@ -1,6 +1,7 @@
 package keycloak.spi.event_listener
 
 import com.google.auto.service.AutoService
+import keycloak.spi.constants.Constants
 import org.keycloak.Config
 import org.jboss.logging.Logger
 import org.keycloak.events.EventListenerProvider
@@ -14,19 +15,15 @@ class CustomEventListenerProviderFactory : EventListenerProviderFactory {
 
     companion object {
         const val PROVIDER_ID = "custom-event-listener"
-        private var maxFailures: Int = 5
-        private var blockDurationMinutes: Long = 15L
-        private var resetDurationMinutes: Long = 60L
+        private var maxFailures: Int = Constants.BF_CONFIG_MAX_FAILURES_VALUE
+        private var blockDurationMinutes: Long = Constants.BF_CONFIG_BLOCK_MINUTES_VALUE
+        private var resetDurationMinutes: Long = Constants.BF_CONFIG_RESET_MINUTES_VALUE
         private val logger = Logger.getLogger(CustomEventListenerProviderFactory::class.java)
     }
 
-    override fun create(keycloakSession: KeycloakSession?): EventListenerProvider {
-        return CustomEventListenerProvider(
-            keycloakSession,
-            maxFailures,
-            blockDurationMinutes,
-            resetDurationMinutes
-        )
+    override fun create(keycloakSession: KeycloakSession?): EventListenerProvider? {
+        if (keycloakSession == null) return null
+        return CustomEventListenerProvider(keycloakSession)
     }
 
     /**
@@ -35,15 +32,21 @@ class CustomEventListenerProviderFactory : EventListenerProviderFactory {
      * export KC_SPI_EVENTS_LISTENER_CUSTOM_EVENT_LISTENER_BLOCK_DURATION_MINUTES=30
      * export KC_SPI_EVENTS_LISTENER_CUSTOM_EVENT_LISTENER_RESET_DURATION_MINUTES=120
      * так задаем параметры окружения, магия сработает и они попадут в init
+     *
+     * KC_SPI_EVENTS_LISTENER_CUSTOM_EVENT_LISTENER_MAX_FAILURES = max-failures
+     * KC_SPI_EVENTS_LISTENER_CUSTOM_EVENT_LISTENER_BLOCK_DURATION_MINUTES = block-duration-minutes
+     * KC_SPI_EVENTS_LISTENER_CUSTOM_EVENT_LISTENER_RESET_DURATION_MINUTES = reset-duration-minutes
      */
     override fun init(config: Config.Scope?) {
+
+        // я переделал получение параметров конфигурации через запрос настроек аутентификатора
+        // здесь это останется просто для примера, как задавать конфигурацию через параметры env
         if (config != null) {
-            // Читаем параметры по их именам (ключи зададим сами, например: max-failures)
-            maxFailures = config.getInt("max-failures", 5) ?: 5
-            blockDurationMinutes = config.getLong("block-duration-minutes", 15L) ?: 10L
-            resetDurationMinutes = config.getLong("reset-duration-minutes", 60L) ?: 120L
+            maxFailures = config.getInt("max-failures", Constants.BF_CONFIG_MAX_FAILURES_VALUE)
+            blockDurationMinutes = config.getLong("block-duration-minutes", Constants.BF_CONFIG_BLOCK_MINUTES_VALUE)
+            resetDurationMinutes = config.getLong("reset-duration-minutes", Constants.BF_CONFIG_RESET_MINUTES_VALUE)
         }
-        logger .info("""
+        logger.debugf("""
             CustomEventListenerProviderFactory :: Initialized
             | maxFailures = $maxFailures
             | blockDurationMinutes = $blockDurationMinutes
@@ -52,7 +55,6 @@ class CustomEventListenerProviderFactory : EventListenerProviderFactory {
     }
 
     override fun postInit(sessionFactory: KeycloakSessionFactory?) {
-        logger.info(">>>> POST INITIALIZED >>>>")
     }
 
     override fun close() {
