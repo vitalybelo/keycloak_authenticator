@@ -46,12 +46,7 @@ class CustomEventListenerProviderFactory : EventListenerProviderFactory {
             blockDurationMinutes = config.getLong("block-duration-minutes", Constants.BF_CONFIG_BLOCK_MINUTES_VALUE)
             resetDurationMinutes = config.getLong("reset-duration-minutes", Constants.BF_CONFIG_RESET_MINUTES_VALUE)
         }
-        logger.debugf("""
-            CustomEventListenerProviderFactory :: Initialized
-            | maxFailures = $maxFailures
-            | blockDurationMinutes = $blockDurationMinutes
-            | resetDurationMinutes = $resetDurationMinutes
-        """.trimIndent())
+        logger.info(">>>> INITIALIZED >>>>")
     }
 
     override fun postInit(sessionFactory: KeycloakSessionFactory?) {

@@ -9,7 +9,7 @@ data class LoginAttempt(
 
     val failures: Int = 0,
     val isBlocked: Boolean = false,
-    val lastFailure: Long = System.currentTimeMillis()
+    val lastFailure: Long = System.currentTimeMillis(),
 
 ) : Serializable {
 
@@ -42,9 +42,9 @@ data class LoginAttempt(
             val seconds = TimeUnit.MILLISECONDS.toSeconds(remainder) % 60
             val timeMessage = if (minutes > 0) {"$minutes мин. $seconds сек." } else { "$seconds сек." }
 
-            logger.warn(">>>> LogIn Blocked for user = ${lockerConfig.username} at $timeMessage minutes")
+            logger.warn(">>>> User :: ${lockerConfig.username} temporally blocked at: $timeMessage")
         } else {
-            logger.info(">>>> LogIn Unblocked for user = ${lockerConfig.username}")
+            logger.info(">>>> User :: ${lockerConfig.username} block passed")
         }
     }
 

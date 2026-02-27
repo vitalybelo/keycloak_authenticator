@@ -129,7 +129,7 @@ class CustomEventListenerProvider(
         // ищем настроенный шаг (execution) в любом Flow, который использует наш аутентификатор
         val execution = realm.authenticationFlowsStream
             .flatMap { flow -> realm.getAuthenticationExecutionsStream(flow.id) }
-            .filter { it.authenticator == Constants.BRUTE_FORCE_ID }
+            .filter { it.authenticator == Constants.BRUTE_FORCE_PASSWORD_FORM_ID }
             .findFirst()
             .orElse(null)
 

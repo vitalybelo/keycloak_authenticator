@@ -28,7 +28,7 @@ class Constants {
         const val ATTRIBUTE_VALUES = "attribute_value"
         const val ATTRIBUTE_GROUPS = "attribute_groups_enabled"
 
-        const val BRUTE_FORCE_ID = "brute_force_locker"
+        const val BRUTE_FORCE_PASSWORD_FORM_ID = "password_brute_force_locker"
         const val BRUTE_FORCE_CACHE ="loginFailures"
 
         const val BF_CONFIG_SWITCH_KEY = "brute_force_switch"

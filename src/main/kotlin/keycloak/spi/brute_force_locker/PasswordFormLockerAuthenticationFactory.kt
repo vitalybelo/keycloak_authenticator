@@ -13,20 +13,23 @@ import org.keycloak.models.KeycloakSessionFactory
 import org.keycloak.provider.ProviderConfigProperty
 import org.keycloak.provider.ProviderConfigurationBuilder
 
+
 /**
- * Фабрика аутентификатора, блокировщика входа по неуспешным попыткам
- * @author Belotserkovskii Vitaly (c) 24.02.2026
+ * Фабрика аутентификатора кастомной формы ввода пароля и мгновенной
+ * проверкой на неуспешные попыткам входа
+ * @author Belotserkovskii Vitaly (c) 26.02.2026
  */
 @AutoService(AuthenticatorFactory::class)
-class BruteForceLockerAuthenticationFactory : AuthenticatorFactory {
+class PasswordFormLockerAuthenticationFactory : AuthenticatorFactory {
 
     companion object {
-        private const val PROVIDER_ID = Constants.BRUTE_FORCE_ID
-        private val logger = Logger.getLogger(BruteForceLockerAuthenticationFactory::class.java)
+        private const val PROVIDER_ID = Constants.BRUTE_FORCE_PASSWORD_FORM_ID
+        private val logger = Logger.getLogger(PasswordFormLockerAuthenticationFactory::class.java)
     }
 
-    override fun create(session: KeycloakSession?): Authenticator {
-        return BruteForceLockerAuthentication()
+    override fun create(session: KeycloakSession?): Authenticator? {
+        if (session == null) return null
+        return PasswordFormLockerAuthentication(session)
     }
 
     override fun init(config: Config.Scope?) {
@@ -44,8 +47,8 @@ class BruteForceLockerAuthenticationFactory : AuthenticatorFactory {
         return PROVIDER_ID
     }
 
-    override fun getDisplayType(): String = "Brute Force Locker"
-    override fun getHelpText(): String = "Checkout login failures count"
+    override fun getDisplayType(): String = "Password Form & Brute Force Locker"
+    override fun getHelpText(): String = "Password Form with checkout login failures"
     override fun getReferenceCategory(): String = "blocker"
 
     override fun isConfigurable(): Boolean = true
@@ -55,6 +58,7 @@ class BruteForceLockerAuthenticationFactory : AuthenticatorFactory {
         return ConfigurableAuthenticatorFactory.REQUIREMENT_CHOICES
     }
 
+    @Suppress("DuplicatedCode")
     override fun getConfigProperties(): List<ProviderConfigProperty?>? {
         return ProviderConfigurationBuilder.create()
             .property()
