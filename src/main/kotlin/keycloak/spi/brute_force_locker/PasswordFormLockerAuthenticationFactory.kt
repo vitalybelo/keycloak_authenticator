@@ -71,7 +71,7 @@ class PasswordFormLockerAuthenticationFactory : AuthenticatorFactory {
 
             .property()
             .name(Constants.BF_CONFIG_MAX_FAILURES_KEY)
-            .label("Login errors max count")
+            .label("Manual max login errors limit")
             .type(ProviderConfigProperty.INTEGER_TYPE)
             .helpText("После скольких ошибок входа, блокировать пользователя")
             .defaultValue(Constants.BF_CONFIG_MAX_FAILURES_VALUE)
@@ -79,7 +79,7 @@ class PasswordFormLockerAuthenticationFactory : AuthenticatorFactory {
 
             .property()
             .name(Constants.BF_CONFIG_BLOCK_MINUTES_KEY)
-            .label("Maximum period of blocking in minutes")
+            .label("Manual max user block in minutes")
             .type(ProviderConfigProperty.INTEGER_TYPE)
             .helpText("Максимальное время, на которое блокируется пользователь")
             .defaultValue(Constants.BF_CONFIG_BLOCK_MINUTES_VALUE)
@@ -87,12 +87,28 @@ class PasswordFormLockerAuthenticationFactory : AuthenticatorFactory {
 
             .property()
             .name(Constants.BF_CONFIG_RESET_MINUTES_KEY)
-            .label("Reset time in minutes")
+            .label("Reset no blocked failures in minutes")
             .type(ProviderConfigProperty.INTEGER_TYPE)
             .helpText("Время в минутах, в течение которого сбрасываются разовые ошибки")
             .defaultValue(Constants.BF_CONFIG_RESET_MINUTES_VALUE)
-
             .add()
+
+            .property()
+            .name(Constants.BF_CONFIG_QUICK_CHECK_KEY)
+            .label("Quick login in milliseconds")
+            .type(ProviderConfigProperty.INTEGER_TYPE)
+            .helpText("Время в миллисекундах, для обнаружения автоматического быстрого входа")
+            .defaultValue(Constants.BF_CONFIG_QUICK_CHECK_VALUE)
+            .add()
+
+            .property()
+            .name(Constants.BF_CONFIG_QUICK_BLOCK_KEY)
+            .label("Quick login block in minutes")
+            .type(ProviderConfigProperty.INTEGER_TYPE)
+            .helpText("Время в минутах, на которое блокируется пользователь после попытки быстрого входа")
+            .defaultValue(Constants.BF_CONFIG_QUICK_BLOCK_VALUE)
+            .add()
+
             .build()
             .also {
                 logger.info("Initialize configuration properties :: Brute Force login failures logic")

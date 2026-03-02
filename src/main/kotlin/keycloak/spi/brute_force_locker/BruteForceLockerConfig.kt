@@ -10,6 +10,8 @@ data class BruteForceLockerConfig(
     val failureNumbers: Int,
     val blockDurationMinutes: Long,
     val resetDurationMinutes: Long,
+    val quickLoginCheckMillis: Long,
+    val quickLoginBlockMinutes: Long,
     val isRequired: Boolean,
     val username: String,
     val realmId: String,
@@ -35,6 +37,8 @@ data class BruteForceLockerConfig(
                 failureNumbers = config?.config?.get(Constants.BF_CONFIG_MAX_FAILURES_KEY)?.toInt() ?: Constants.BF_CONFIG_MAX_FAILURES_VALUE,
                 blockDurationMinutes = config?.config?.get(Constants.BF_CONFIG_BLOCK_MINUTES_KEY)?.toLong() ?: Constants.BF_CONFIG_BLOCK_MINUTES_VALUE,
                 resetDurationMinutes = config?.config?.get(Constants.BF_CONFIG_RESET_MINUTES_KEY)?.toLong() ?: Constants.BF_CONFIG_RESET_MINUTES_VALUE,
+                quickLoginCheckMillis = config?.config?.get(Constants.BF_CONFIG_QUICK_CHECK_KEY)?.toLong() ?: Constants.BF_CONFIG_QUICK_CHECK_VALUE,
+                quickLoginBlockMinutes = config?.config?.get(Constants.BF_CONFIG_QUICK_BLOCK_KEY)?.toLong() ?: Constants.BF_CONFIG_QUICK_BLOCK_VALUE,
                 isRequired = context.execution?.isRequired ?: true,
                 username = username,
                 realmId = realmId,
@@ -45,13 +49,15 @@ data class BruteForceLockerConfig(
             logger.debug(""">>>> 
                 | Authentication start with config
                 | ---------------------------------------------------------------------
-                | User = $username 
+                | Username = $username 
                 | Cache key = $cacheKey
                 |
                 | isSwitchedOn = ${bruteForceLockerConfig.isSwitchedOn}
                 | failureNumbers = ${bruteForceLockerConfig.failureNumbers}
                 | blockDurationMinutes = ${bruteForceLockerConfig.blockDurationMinutes}
                 | resetDurationMinutes = ${bruteForceLockerConfig.resetDurationMinutes}
+                | quickLoginCheckMillis = ${bruteForceLockerConfig.quickLoginCheckMillis}
+                | quickLoginBlockMinutes = ${bruteForceLockerConfig.quickLoginBlockMinutes}
                 | isRequired = ${bruteForceLockerConfig.isRequired}
                 | ---------------------------------------------------------------------
             """.trimIndent()

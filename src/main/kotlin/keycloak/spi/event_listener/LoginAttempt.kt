@@ -9,7 +9,8 @@ data class LoginAttempt(
 
     val failures: Int = 0,
     val isBlocked: Boolean = false,
-    val lastFailure: Long = System.currentTimeMillis(),
+    val lastFailure: Long? = null,
+    var blockInMinutes: Long = 1L
 
 ) : Serializable {
 
@@ -32,7 +33,8 @@ data class LoginAttempt(
 
     fun displayBlockedMessage(lockerConfig: BruteForceLockerConfig) {
 
-        val totalInMillis = TimeUnit.MINUTES.toMillis(lockerConfig.blockDurationMinutes)
+        val totalInMillis = TimeUnit.MINUTES.toMillis(blockInMinutes)
+        val lastFailure = lastFailure ?: System.currentTimeMillis()
         val spentInMillis = System.currentTimeMillis() - lastFailure
         val remainder = totalInMillis - spentInMillis
 
@@ -44,7 +46,7 @@ data class LoginAttempt(
 
             logger.warn(">>>> User :: ${lockerConfig.username} temporally blocked at: $timeMessage")
         } else {
-            logger.info(">>>> User :: ${lockerConfig.username} block passed")
+            logger.info(">>>> User :: ${lockerConfig.username} block passed by time")
         }
     }
 

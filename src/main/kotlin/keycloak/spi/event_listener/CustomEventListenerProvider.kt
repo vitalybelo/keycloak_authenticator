@@ -82,45 +82,83 @@ class CustomEventListenerProvider(
         val provider = session.getProvider(InfinispanConnectionProvider::class.java)
         val cache = provider.getCache<String, LoginAttempt>(BRUTE_FORCE_CACHE)
 
-        val updatedAttempt = cache.compute(cacheKey) { _, currentAttempt ->
+        var isQuickLogin = false
+        var isBlocked = false
+        val attempt = cache.compute(cacheKey) { _, currentAttempt ->
+
+            val currentMillis = System.currentTimeMillis()
             val newFailures = (currentAttempt?.failures ?: 0) + 1
+            val lastFailure = currentAttempt?.lastFailure ?: currentMillis
+            if (newFailures > 1) {
+                isQuickLogin = (currentMillis - lastFailure) <= config.quickLoginCheckInMillis
+            }
+            isBlocked = newFailures >= config.maxFailures
+
+            logger.debug(""">>>
+                | Login error compilation
+                | -------------------------------------
+                | currentMillis: $currentMillis
+                | newFailures: $newFailures
+                | lastFailure: $lastFailure
+                | isQuickBlocked: $isQuickLogin
+                | isManualBlocked: $isBlocked
+                | -------------------------------------
+            """.trimIndent()
+            )
             LoginAttempt(
                 failures = newFailures,
-                isBlocked = newFailures >= config.maxFailures,
+                isBlocked = isQuickLogin || isBlocked,
                 lastFailure = System.currentTimeMillis()
             )
         }
 
         // Устанавливаем блокировку в зависимости от флага isBlocked
-        if (updatedAttempt != null) {
-            if (updatedAttempt.isBlocked) {
-                logger.info(""">>>>
-                        | Блокировка на ${config.blockDurationMinutes} минут, после ${updatedAttempt.failures} попыток: 
-                        | Пользователь = ${event.userId}
-                        | cacheKey = $cacheKey 
-                        """.trimIndent()
+        if (attempt != null) {
+            if (attempt.isBlocked) {
+                // вычисляем на какое время блокировать пользователя
+                attempt.blockInMinutes =
+                    if (isQuickLogin) {
+                        if (isBlocked) {
+                            config.quickLoginBlockInMinutes + config.blockDurationMinutes
+                        } else {
+                            config.quickLoginBlockInMinutes
+                        }
+                    } else {
+                        config.blockDurationMinutes
+                    }
+                logger.debug(""">>>>
+                    | ---------------------------------------------------------------------------------------------
+                    | ATTENTION !!!
+                    |
+                    | Блокировка на ${attempt.blockInMinutes} минут, после ${attempt.failures} попыток:
+                    | Пользователь = ${event.userId}
+                    | ---------------------------------------------------------------------------------------------
+                    """.trimIndent()
                 )
                 // ставим время жизни записи, равное времени блокировки
-                cache.put(cacheKey, updatedAttempt, config.blockDurationMinutes, TimeUnit.MINUTES)
+                cache.put(cacheKey, attempt, attempt.blockInMinutes, TimeUnit.MINUTES)
             } else {
                 logger.info(""">>>>
-                        | Ошибка входа, сброс ошибок через ${config.resetDurationMinutes} минут:
-                        | Пользователь = ${event.userId}
-                        | Попытка = ${updatedAttempt.failures}
-                     """.trimIndent()
+                    | ---------------------------------------------------------------------------------------------
+                    | Ошибка входа, сброс ошибок через ${config.resetDurationMinutes} минут:
+                    | Пользователь = ${event.userId}
+                    | Попытка = ${attempt.failures}
+                    | ---------------------------------------------------------------------------------------------
+                    """.trimIndent()
                 )
                 // окно накопления ошибок, если блокировки еще нет, но счетчик уже есть
-                cache.put(cacheKey, updatedAttempt, config.resetDurationMinutes, TimeUnit.MINUTES)
+                cache.put(cacheKey, attempt, config.resetDurationMinutes, TimeUnit.MINUTES)
             }
         }
     }
 
 
     /**
-     * Ищет среди зарегистрированных аутентификаторов рабочей области, кастомный brute_force_id.
+     * Ищет среди зарегистрированных аутентификаторов рабочей области, кастомный BRUTE_FORCE_PASSWORD_FORM_ID.
      * Если находит, читает его настройки, инициализирует экземпляр класса BruteForceConfig и завершает работу.
-     * Если не находит, возвращает дефолтные настройки hardcoded
+     * Если не находит, успокаивается дефолтными настройки hardcoded и закрывает на меня глаза
      * @return экземпляр класса BruteForceConfig кастомных настроек
+     * @author Belotserkovskii Vitaly (c) 27.02.2026
      */
     fun bruteForceConfiguration(): BruteForceConfig {
 
@@ -149,19 +187,27 @@ class CustomEventListenerProvider(
         val maxFailures = configMap[Constants.BF_CONFIG_MAX_FAILURES_KEY]?.toInt() ?: Constants.BF_CONFIG_MAX_FAILURES_VALUE
         val blockMinutes = configMap[Constants.BF_CONFIG_BLOCK_MINUTES_KEY]?.toLong() ?: Constants.BF_CONFIG_BLOCK_MINUTES_VALUE
         val resetMinutes = configMap[Constants.BF_CONFIG_RESET_MINUTES_KEY]?.toLong() ?: Constants.BF_CONFIG_RESET_MINUTES_VALUE
+        val quickLoginMillis = configMap[Constants.BF_CONFIG_QUICK_CHECK_KEY]?.toLong() ?: Constants.BF_CONFIG_QUICK_CHECK_VALUE
+        val quickBlockMinutes = configMap[Constants.BF_CONFIG_QUICK_BLOCK_KEY]?.toLong() ?: Constants.BF_CONFIG_QUICK_BLOCK_VALUE
 
-        logger.debug(""">>>> Brute force configuration found
+        logger.debug(""">>>>
+            | Brute force configuration found
+            | --------------------------------------------------
             | isSwitchedOn = $isSwitchedOn
             | maxFailures = $maxFailures
             | blockDurationMinutes = $blockMinutes
             | resetDurationMinutes = $resetMinutes
+            | quickLoginMillis = $quickLoginMillis
+            | quickBlockMinutes = $quickBlockMinutes
         """.trimIndent()
         )
         return BruteForceConfig(
             isSwitchedOn = isSwitchedOn,
             maxFailures = maxFailures,
             blockDurationMinutes = blockMinutes,
-            resetDurationMinutes = resetMinutes
+            resetDurationMinutes = resetMinutes,
+            quickLoginCheckInMillis = quickLoginMillis,
+            quickLoginBlockInMinutes = quickBlockMinutes
         )
     }
 

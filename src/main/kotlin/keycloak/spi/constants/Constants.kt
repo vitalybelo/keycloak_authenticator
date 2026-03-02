@@ -43,6 +43,12 @@ class Constants {
         const val BF_CONFIG_RESET_MINUTES_KEY = "reset_minutes"
         const val BF_CONFIG_RESET_MINUTES_VALUE = 120L
 
+        const val BF_CONFIG_QUICK_CHECK_KEY = "quick_login_interval"
+        const val BF_CONFIG_QUICK_CHECK_VALUE = 1000L
+
+        const val BF_CONFIG_QUICK_BLOCK_KEY = "quick_block_minutes"
+        const val BF_CONFIG_QUICK_BLOCK_VALUE = 1L
+
         const val UNKNOWN_REALM = "unknown_realm"
         const val UNKNOWN_USER = "unknown_user"
         const val ANONYMOUS = "anonymous"

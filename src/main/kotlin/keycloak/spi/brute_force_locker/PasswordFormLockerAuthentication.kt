@@ -56,6 +56,13 @@ class PasswordFormLockerAuthentication(
     }
 
 
+    /**
+     * Читает из infinispan состояние ошибок входя для пользователя, для которого подписан контекст.
+     * Если в infinispan не найдены записи для пользователя, означает что в течение установленного срока,
+     * пользователь не допускал ошибок входа. Если найден кэш для пользователя, выполняется проверка на
+     * наличие установленной блокировки, иначе отображается количество ошибок и период из обнуления.
+     * @return true если для пользователя установлена временная блокировка
+     */
     private fun isUserLockedOut(context: AuthenticationFlowContext?): Boolean {
 
         if (context == null) return false
@@ -74,6 +81,8 @@ class PasswordFormLockerAuthentication(
                 } else {
                     attempt.displayLoginAttempts()
                 }
+            } else {
+                logger.debug(">>>> User: ${context.user?.username} has not login failures")
             }
         }
         return false
