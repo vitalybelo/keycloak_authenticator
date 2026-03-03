@@ -2,10 +2,10 @@ package keycloak.spi.event_listener
 
 import keycloak.spi.brute_force_locker.BruteForceConfig
 import keycloak.spi.constants.Constants
-import keycloak.spi.constants.Constants.Companion.BRUTE_FORCE_CACHE
+import keycloak.spi.getCacheKey
+import keycloak.spi.getInfinispanCache
 import keycloak.spi.jackson_mapper.toJsonString
 import org.jboss.logging.Logger
-import org.keycloak.connections.infinispan.InfinispanConnectionProvider
 import org.keycloak.events.Event
 import org.keycloak.events.EventListenerProvider
 import org.keycloak.events.EventType
@@ -75,12 +75,13 @@ class CustomEventListenerProvider(
     private fun bruteForceDetector(event: Event) {
 
         if (event.type != EventType.LOGIN_ERROR) return
+        val userId = event.userId ?: return
+        val realmId = event.realmId ?: return
 
         val config = bruteForceConfiguration()
-        val cacheKey = "bf:${event.realmId}:${event.userId}"
+        val cacheKey = getCacheKey(realmId, userId)
 
-        val provider = session.getProvider(InfinispanConnectionProvider::class.java)
-        val cache = provider.getCache<String, LoginAttempt>(BRUTE_FORCE_CACHE)
+        val cache = getInfinispanCache(session)
 
         var isQuickLogin = false
         var isBlocked = false
@@ -94,7 +95,7 @@ class CustomEventListenerProvider(
             }
             isBlocked = newFailures >= config.maxFailures
 
-            logger.debug(""">>>
+            logger.debug(""">>>>
                 | Login error compilation
                 | -------------------------------------
                 | currentMillis: $currentMillis

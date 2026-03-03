@@ -30,7 +30,7 @@ import org.jboss.logging.Logger
 import org.keycloak.events.EventBuilder
 import org.keycloak.events.EventType
 import org.keycloak.models.cache.UserCache
-import org.keycloak.services.managers.AuthenticationManager
+
 
 class CustomAdminResource(
 
@@ -417,9 +417,8 @@ class CustomAdminResource(
                 .entity(ResponseDto.error("user with id = $userId not found")).build()
 
         // завершаем все текущие сессии пользователя для рабочей области realm
-        session.sessions().getUserSessionsStream(realm, userModel)?.forEach { userSession ->
-            AuthenticationManager.backchannelLogout(session, userSession, true)
-        }
+        session.sessions().removeUserSessions(realm, userModel)
+
 		// удаляем пользователя из кеша текущей рабочей области
         session.getProvider(UserCache::class.java)?.evict(realm, userModel)
 

@@ -1,6 +1,7 @@
 package keycloak.spi.brute_force_locker
 
 import keycloak.spi.constants.Constants
+import keycloak.spi.getCacheKey
 import org.jboss.logging.Logger
 import org.keycloak.authentication.AuthenticationFlowContext
 
@@ -28,7 +29,7 @@ data class BruteForceLockerConfig(
             val realmId = context.realm?.id ?: Constants.UNKNOWN_REALM
             val userId = context.user?.id ?: Constants.UNKNOWN_USER
             val username = context.user?.username ?: Constants.ANONYMOUS
-            val cacheKey = "bf:$realmId:$userId"
+            val cacheKey = getCacheKey(realmId, userId)
 
             val config = context.authenticatorConfig
             val bruteForceLockerConfig = BruteForceLockerConfig(
