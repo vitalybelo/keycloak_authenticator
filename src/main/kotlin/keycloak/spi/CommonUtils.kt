@@ -12,7 +12,7 @@ import org.keycloak.models.KeycloakSession
  */
 fun getCacheKey(realmId: String, userId: String) = "bf:${realmId}:${userId}"
 
-fun getInfinispanCache(session: KeycloakSession): Cache<String, LoginAttempt> {
+fun getInfinispanLoginAttemptCache(session: KeycloakSession): Cache<String, LoginAttempt> {
 
     val cache = session
         .getProvider(InfinispanConnectionProvider::class.java)

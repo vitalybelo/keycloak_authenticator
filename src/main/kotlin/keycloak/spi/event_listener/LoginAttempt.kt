@@ -10,7 +10,7 @@ data class LoginAttempt(
     val failures: Int = 0,
     val isBlocked: Boolean = false,
     val lastFailure: Long? = null,
-    var blockInMinutes: Long = 1L
+    var blockInMinutes: Long = 0L
 
 ) : Serializable {
 

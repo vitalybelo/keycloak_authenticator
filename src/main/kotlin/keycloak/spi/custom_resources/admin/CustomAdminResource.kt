@@ -1,3 +1,5 @@
+@file:Suppress("DuplicatedCode")
+
 package keycloak.spi.custom_resources.admin
 
 import jakarta.ws.rs.DELETE
@@ -13,6 +15,8 @@ import jakarta.ws.rs.core.Response
 import keycloak.spi.custom_resources.model.LoginFailureDto
 import keycloak.spi.custom_resources.model.ResponseDto
 import keycloak.spi.custom_resources.model.UserListDto
+import keycloak.spi.getCacheKey
+import keycloak.spi.getInfinispanLoginAttemptCache
 import keycloak.spi.jackson_mapper.toPrettyJsonString
 import org.eclipse.microprofile.openapi.annotations.media.Content
 import org.eclipse.microprofile.openapi.annotations.media.Schema
@@ -279,6 +283,79 @@ class CustomAdminResource(
     }
 
 
+    @GET
+    @Path("users/{userId}/login-attempt")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun getLoginAttempt(@PathParam("userId") userId: String?): Response {
+
+        logger.info(">>>> Received request to check login attempts for userId = $userId")
+        if (userId.isNullOrBlank()) {
+            return Response
+                .status(Response.Status.BAD_REQUEST)
+                .entity(ResponseDto.error("bad request userId = $userId")).build()
+        }
+
+        auth.users().requireQuery() // требуем роль для запроса
+
+        val user = session.users().getUserById(realm, userId)
+            ?: return Response
+                .status(Response.Status.NOT_FOUND)
+                .entity(ResponseDto.error("user userId = $userId not found")).build()
+
+        logger.info(">>>> User \"${user.username}\" found successfully")
+        val cacheKey = getCacheKey(realm.id, userId)
+        val cache = getInfinispanLoginAttemptCache(session)
+
+        val loginAttempt = cache[cacheKey]
+        if (loginAttempt != null) {
+
+            logger.info(">>>> User = ${user.username} :: login errors found: $loginAttempt")
+            return Response.ok(ResponseDto.success("login errors found", loginAttempt)).build()
+        }
+        return Response
+            .status(Response.Status.NOT_FOUND)
+            .entity(ResponseDto.error("Login errors not found for user = ${user.username}")).build()
+    }
+
+
+    @DELETE
+    @Path("users/{userId}/login-attempt")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun deleteLoginAttempt(@PathParam("userId") userId: String?): Response {
+
+        logger.info(">>>> Received request to delete login attempts for userId = $userId")
+        if (userId.isNullOrBlank()) {
+            return Response
+                .status(Response.Status.BAD_REQUEST)
+                .entity(ResponseDto.error("bad request userId = $userId")).build()
+        }
+
+        auth.users().requireManage() // требуем роль для управления
+
+        val user = session.users().getUserById(realm, userId)
+            ?: return Response
+                .status(Response.Status.NOT_FOUND)
+                .entity(ResponseDto.error("user userId = $userId not found")).build()
+
+        val cacheKey = getCacheKey(realm.id, userId)
+        val cache = getInfinispanLoginAttemptCache(session)
+
+        if (cache.containsKey(cacheKey)) {
+
+            logger.info(">>>> Login attempt found for user = ${user.username}")
+            val loginAttempt = cache.remove(cacheKey)
+            if (loginAttempt != null) {
+                logger.info(">>>> Login attempt: $loginAttempt :: reset")
+                return Response
+                    .ok(ResponseDto.success("last record in body", loginAttempt)).build()
+            }
+        }
+        return Response
+            .status(Response.Status.NOT_FOUND)
+            .entity(ResponseDto.error("Login attempts not found for user = ${user.username}")).build()
+    }
+
+
     /**
      * Выполняет проверку наличия временной блокировки в результате многократно неверно введенных
      * логина или пароля - функционал brute force.
@@ -364,6 +441,7 @@ class CustomAdminResource(
             .ok(ResponseDto.success("user: ${userModel.username} unlocked successfully"))
             .build()
     }
+
 
 
     /**

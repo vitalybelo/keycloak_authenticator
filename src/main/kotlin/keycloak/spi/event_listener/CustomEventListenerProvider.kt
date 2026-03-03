@@ -3,7 +3,7 @@ package keycloak.spi.event_listener
 import keycloak.spi.brute_force_locker.BruteForceConfig
 import keycloak.spi.constants.Constants
 import keycloak.spi.getCacheKey
-import keycloak.spi.getInfinispanCache
+import keycloak.spi.getInfinispanLoginAttemptCache
 import keycloak.spi.jackson_mapper.toJsonString
 import org.jboss.logging.Logger
 import org.keycloak.events.Event
@@ -81,7 +81,7 @@ class CustomEventListenerProvider(
         val config = bruteForceConfiguration()
         val cacheKey = getCacheKey(realmId, userId)
 
-        val cache = getInfinispanCache(session)
+        val cache = getInfinispanLoginAttemptCache(session)
 
         var isQuickLogin = false
         var isBlocked = false

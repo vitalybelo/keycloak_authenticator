@@ -2,7 +2,7 @@ package keycloak.spi.token_mapper
 
 import jakarta.ws.rs.core.Response
 import keycloak.spi.getCacheKey
-import keycloak.spi.getInfinispanCache
+import keycloak.spi.getInfinispanLoginAttemptCache
 import org.jboss.logging.Logger
 import org.keycloak.events.Errors
 import org.keycloak.models.ClientSessionContext
@@ -86,7 +86,7 @@ class BlockLockedUserProtocolMapper: AbstractOIDCProtocolMapper(), OIDCAccessTok
         val realmId = session.context.realm.id
         val cacheKey = getCacheKey(realmId, user.id)
 
-        val cache = getInfinispanCache(session)
+        val cache = getInfinispanLoginAttemptCache(session)
         val attempt = cache[cacheKey]
         if (attempt != null) {
             logger.debug(">>>> isLockedInInfinispan(): userId = ${user.username} :: attempt = $attempt")

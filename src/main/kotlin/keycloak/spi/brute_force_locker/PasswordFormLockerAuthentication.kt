@@ -1,7 +1,7 @@
 package keycloak.spi.brute_force_locker
 
 import jakarta.ws.rs.core.Response
-import keycloak.spi.getInfinispanCache
+import keycloak.spi.getInfinispanLoginAttemptCache
 import org.jboss.logging.Logger
 import org.keycloak.authentication.AuthenticationFlowContext
 import org.keycloak.authentication.authenticators.browser.PasswordForm
@@ -65,7 +65,7 @@ class PasswordFormLockerAuthentication(
         if (lockerConfig.isConfigured()) {
 
             logger.debug(">>>> Password brute force locker authentication configured >>>>")
-            val cache = getInfinispanCache(context.session)
+            val cache = getInfinispanLoginAttemptCache(context.session)
             val attempt = cache[lockerConfig.cacheKey]
 
             if (attempt != null) {
