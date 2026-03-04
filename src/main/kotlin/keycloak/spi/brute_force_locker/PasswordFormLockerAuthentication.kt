@@ -1,7 +1,7 @@
 package keycloak.spi.brute_force_locker
 
 import jakarta.ws.rs.core.Response
-import keycloak.spi.getInfinispanLoginAttemptCache
+import keycloak.spi.utils.getInfinispanLoginAttemptCache
 import org.jboss.logging.Logger
 import org.keycloak.authentication.AuthenticationFlowContext
 import org.keycloak.authentication.authenticators.browser.PasswordForm

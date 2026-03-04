@@ -1,8 +1,8 @@
 package keycloak.spi.token_mapper
 
 import jakarta.ws.rs.core.Response
-import keycloak.spi.getCacheKey
-import keycloak.spi.getInfinispanLoginAttemptCache
+import keycloak.spi.utils.getCacheKey
+import keycloak.spi.utils.getInfinispanLoginAttemptCache
 import org.jboss.logging.Logger
 import org.keycloak.events.Errors
 import org.keycloak.models.ClientSessionContext

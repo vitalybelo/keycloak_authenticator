@@ -2,6 +2,8 @@
 
 package keycloak.spi.custom_resources.admin
 
+import jakarta.ws.rs.BadRequestException
+import jakarta.ws.rs.NotFoundException
 import jakarta.ws.rs.DELETE
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
@@ -12,14 +14,14 @@ import jakarta.ws.rs.Produces
 import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
+import keycloak.spi.constants.Constants
 import keycloak.spi.custom_resources.model.LoginFailureDto
 import keycloak.spi.custom_resources.model.ResponseDto
 import keycloak.spi.custom_resources.model.UserListDto
-import keycloak.spi.getCacheKey
-import keycloak.spi.getInfinispanLoginAttemptCache
+import keycloak.spi.jackson_mapper.toJsonString
+import keycloak.spi.utils.getCacheKey
+import keycloak.spi.utils.getInfinispanLoginAttemptCache
 import keycloak.spi.jackson_mapper.toPrettyJsonString
-import org.eclipse.microprofile.openapi.annotations.media.Content
-import org.eclipse.microprofile.openapi.annotations.media.Schema
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses
@@ -48,6 +50,10 @@ class CustomAdminResource(
 
     companion object {
         private val logger = Logger.getLogger(CustomAdminResource::class.java)
+        private const val MAX_COUNT = 1000
+        private const val PAGE_SIZE = 100
+        private const val ACTION_UNLOCK_USER = "UNLOCK_USER"
+        private const val ACTION_LOGOUT = "LOGOUT"
     }
 
 
@@ -55,6 +61,12 @@ class CustomAdminResource(
      * Выполняет чтение учетных записей рабочей области realm и возвращает все username
      * @return status выполнения и экземпляр класса UserListDto
      */
+    @APIResponses(value = [
+        APIResponse(responseCode = "200", description = "Username list received"),
+        APIResponse(responseCode = "401", description = "Unauthorized"),
+        APIResponse(responseCode = "403", description = "Forbidden to manage realm"),
+        APIResponse(responseCode = "404", description = "Users absent")
+    ])
     @GET
     @Path("users/list")
     @Produces(MediaType.APPLICATION_JSON)
@@ -63,19 +75,18 @@ class CustomAdminResource(
         @QueryParam("max") maxCount: Int
     ): Response {
 
-        val page = if (pageSize == 0) 100 else pageSize
-        val max = if (maxCount == 0) 500_000 else maxCount
+        auth.users().requireQuery() // требуем роль для запроса
 
+        val page = if (pageSize <= 0) PAGE_SIZE else pageSize
+        val max = if (maxCount <= 0) MAX_COUNT else maxCount
         logger.info(">>>> Usernames list procedure started for page = $page, max = $max")
-        val userPermissionEvaluator = auth.users()
-        userPermissionEvaluator.requireQuery() // требуем роль для запроса
 
         val count = session.users().getUsersCount(realm)
         if (count <= 0) {
+            logger.info(">>>> Not found users")
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(ResponseDto.error("Users absent in realm $realm")).build()
+                .entity(ResponseDto.error("Users absent in realm \"$realm\"")).build()
         }
-        logger.info(">>>> Totally found: $count users")
         val limit = minOf(count, max)
 
         var offset = 0
@@ -101,7 +112,7 @@ class CustomAdminResource(
             offset += batch
         }
 
-        logger.info(">>>> Successfully found: ${users.size} users in realm: ${realm.name}")
+        logger.info(">>>> Successfully found: ${users.size} users in realm: \"${realm.name}\"")
         val userListDto = UserListDto(users.size, users)
 
         adminEventBuilder.resource(ResourceType.USER)
@@ -113,8 +124,7 @@ class CustomAdminResource(
             .success()
 
         return Response.ok()
-            .entity(ResponseDto.success("Users found and filtered", userListDto))
-            .build()
+            .entity(ResponseDto.success("Found and filtered", userListDto)).build()
     }
 
 
@@ -124,33 +134,13 @@ class CustomAdminResource(
      * @param attributes карта атрибутов: ключ, значение
      * @return status выполнения
      */
-    @APIResponses(
-        APIResponse(
-            responseCode = "200",
-            description = "Success updated attributes",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "401",
-            description = "Unauthorized",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "403",
-            description = "Forbidden to manage realm",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "400",
-            description = "Bad request. UserId or Attribute Map is invalid",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "404",
-            description = "User Not Found",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        )
-    )
+    @APIResponses(value = [
+        APIResponse(responseCode = "200", description = "Success updated attributes"),
+        APIResponse(responseCode = "401", description = "Unauthorized"),
+        APIResponse(responseCode = "403", description = "Forbidden to manage realm"),
+        APIResponse(responseCode = "400", description = "Bad request. UserId or Attribute Map is invalid"),
+        APIResponse(responseCode = "404", description = "User Not Found")
+    ])
     @PUT
     @Path("users/{userId}/attributes")
     @Produces(MediaType.APPLICATION_JSON)
@@ -159,15 +149,9 @@ class CustomAdminResource(
         @RequestBody attributes: Map<String, String?>?
     ): Response {
 
-        if (userId.isNullOrBlank() || attributes.isNullOrEmpty()) {
-            return Response
-                .status(Response.Status.BAD_REQUEST)
-                .entity(ResponseDto.error("Bad request userId = $userId, attributes = $attributes")).build()
-        }
         auth.users().requireManage() // требуем роль управления
-
-        val userModel = session.users().getUserById(realm, userId)
-            ?: return Response.status(Response.Status.NOT_FOUND).entity("User not found").build()
+        val userModel = validateUser(userId, "change user attributes")
+        if (attributes.isNullOrEmpty()) throw BadRequestException("User attributes absent in request")
 
         attributes.forEach { (key, value) ->
             if (value.isNullOrBlank()) {
@@ -181,7 +165,7 @@ class CustomAdminResource(
         val details = mapOf(
             "action" to "update attributes",
             "payload" to attributes.toString()
-            )
+        )
         createEvent(userModel, EventType.UPDATE_PROFILE, details)
         adminEventBuilder.resource(ResourceType.USER)
             .resourcePath(session.context.uri)
@@ -193,8 +177,7 @@ class CustomAdminResource(
             .success()
 
         return Response.ok()
-            .entity(ResponseDto.success("attributes updated", userModel.attributes))
-            .build()
+            .entity(ResponseDto.success("attributes updated", userModel.attributes)).build()
     }
 
 
@@ -203,63 +186,28 @@ class CustomAdminResource(
      * логина или пароля - функционал brute force.
      * @param userId идентификатор пользователя
      */
-    @APIResponses(
-        APIResponse(
-            responseCode = "200",
-            description = "Login failures found",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "401",
-            description = "Unauthorized",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "403",
-            description = "Forbidden to query realm",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "400",
-            description = "Bad request, userId is invalid",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "404",
-            description = "User not found",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "204",
-            description = "Gone successfully, but user login failures absent",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        )
-    )
+    @APIResponses(value = [
+        APIResponse(responseCode = "200", description = "Login failures found"),
+        APIResponse(responseCode = "401", description = "Unauthorized"),
+        APIResponse(responseCode = "403", description = "Forbidden to query realm"),
+        APIResponse(responseCode = "400", description = "Bad request, userId is invalid"),
+        APIResponse(responseCode = "404", description = "User not found"),
+        APIResponse(responseCode = "202", description = "User login failures absent")
+    ])
     @GET
     @Path("users/{userId}/login-failures")
     @Produces(MediaType.APPLICATION_JSON)
     fun getLoginFailures(@PathParam("userId") userId: String?): Response {
 
-        logger.info(">>>> Received request to check login failures for userId = $userId")
-        if (userId.isNullOrBlank()) {
-            return Response
-                .status(Response.Status.BAD_REQUEST)
-                .entity(ResponseDto.error("bad request userId = $userId")).build()
-        }
-
         auth.users().requireQuery() // требуем роль для запроса
+        val user = validateUser(userId, "to check login failures")
 
-        val userModel = session.users().getUserById(realm, userId)
-            ?: return Response
-                .status(Response.Status.NOT_FOUND)
-                .entity(ResponseDto.error("user userId = $userId not found")).build()
-
-        val username = userModel.username
+        val username = user.username
         logger.info(">>>> User: \"$username\" found successfully")
         val failureProvider = session.loginFailures()
-        val userFailureModel = failureProvider.getUserLoginFailure(realm, userModel.id)
+        val userFailureModel = failureProvider.getUserLoginFailure(realm, user.id)
             ?: return Response
-                .status(Response.Status.NO_CONTENT)
+                .status(Response.Status.ACCEPTED)
                 .entity(ResponseDto.success("user $username has no locks")).build()
 
         val failureModel = LoginFailureDto.fromModel(userFailureModel)
@@ -283,76 +231,101 @@ class CustomAdminResource(
     }
 
 
+    /**
+     * Выполняет чтение из кэша infinispan записи об ошибках входа для пользователя, заданного параметром.
+     * @param userId идентификатор пользователя, для которого выполняется проверка
+     * @return запись об ошибках входа, если они существуют (иначе 202 и текст)
+     */
+    @APIResponses(value = [
+        APIResponse(responseCode = "200", description = "Login failures found"),
+        APIResponse(responseCode = "401", description = "Unauthorized"),
+        APIResponse(responseCode = "403", description = "Forbidden to query realm"),
+        APIResponse(responseCode = "400", description = "Bad request, userId is invalid"),
+        APIResponse(responseCode = "404", description = "User not found"),
+        APIResponse(responseCode = "202", description = "User login failures absent")
+    ])
     @GET
     @Path("users/{userId}/login-attempt")
     @Produces(MediaType.APPLICATION_JSON)
     fun getLoginAttempt(@PathParam("userId") userId: String?): Response {
 
-        logger.info(">>>> Received request to check login attempts for userId = $userId")
-        if (userId.isNullOrBlank()) {
-            return Response
-                .status(Response.Status.BAD_REQUEST)
-                .entity(ResponseDto.error("bad request userId = $userId")).build()
-        }
-
         auth.users().requireQuery() // требуем роль для запроса
+        val user = validateUser(userId, "to check login attempts")
 
-        val user = session.users().getUserById(realm, userId)
-            ?: return Response
-                .status(Response.Status.NOT_FOUND)
-                .entity(ResponseDto.error("user userId = $userId not found")).build()
-
-        logger.info(">>>> User \"${user.username}\" found successfully")
-        val cacheKey = getCacheKey(realm.id, userId)
+        val username = user.username ?: Constants.ANONYMOUS
+        val cacheKey = getCacheKey(realm.id, userId!!)
         val cache = getInfinispanLoginAttemptCache(session)
 
         val loginAttempt = cache[cacheKey]
-        if (loginAttempt != null) {
+            ?: return Response
+                .status(Response.Status.ACCEPTED)
+                .entity(ResponseDto.success("Login errors absent for user = $username")).build()
 
-            logger.info(">>>> User = ${user.username} :: login errors found: $loginAttempt")
-            return Response.ok(ResponseDto.success("login errors found", loginAttempt)).build()
-        }
+        logger.info(">>>> User = $username :: login errors found: ${loginAttempt.toJsonString()}")
+        adminEventBuilder.resource(ResourceType.USER)
+            .resourcePath(session.context.uri)
+            .operation(OperationType.ACTION)
+            .detail("username", username)
+            .detail("failures", loginAttempt.failures.toString())
+            .detail("lastFailure", loginAttempt.lastFailure.toString())
+            .detail("isBlocked", loginAttempt.isBlocked.toString())
+            .representation(loginAttempt)
+            .authUser(auth.adminAuth()?.user)
+            .realm(realm)
+            .success()
+
         return Response
-            .status(Response.Status.NOT_FOUND)
-            .entity(ResponseDto.error("Login errors not found for user = ${user.username}")).build()
+            .ok(ResponseDto.success("login errors registered", loginAttempt)).build()
     }
 
 
+    /**
+     * Обнуляет для заданного параметром пользователя все предыдущие ошибки входа (если они были)
+     * @param userId идентификатор пользователя, для которого выполняется проверка
+     * @return экземпляр класса из infinispan или 202
+     */
+    @APIResponses(value = [
+        APIResponse(responseCode = "200", description = "Login failures deleted"),
+        APIResponse(responseCode = "401", description = "Unauthorized"),
+        APIResponse(responseCode = "403", description = "Forbidden to manage realm"),
+        APIResponse(responseCode = "400", description = "Bad request, userId is invalid"),
+        APIResponse(responseCode = "404", description = "User not found"),
+        APIResponse(responseCode = "202", description = "User login failures absent")
+    ])
     @DELETE
     @Path("users/{userId}/login-attempt")
     @Produces(MediaType.APPLICATION_JSON)
     fun deleteLoginAttempt(@PathParam("userId") userId: String?): Response {
 
-        logger.info(">>>> Received request to delete login attempts for userId = $userId")
-        if (userId.isNullOrBlank()) {
-            return Response
-                .status(Response.Status.BAD_REQUEST)
-                .entity(ResponseDto.error("bad request userId = $userId")).build()
-        }
-
         auth.users().requireManage() // требуем роль для управления
+        val user = validateUser(userId, "to delete login attempts")
 
-        val user = session.users().getUserById(realm, userId)
-            ?: return Response
-                .status(Response.Status.NOT_FOUND)
-                .entity(ResponseDto.error("user userId = $userId not found")).build()
-
-        val cacheKey = getCacheKey(realm.id, userId)
+        val cacheKey = getCacheKey(realm.id, userId!!)
         val cache = getInfinispanLoginAttemptCache(session)
 
-        if (cache.containsKey(cacheKey)) {
+        val username = user.username ?: Constants.ANONYMOUS
+        val loginAttempt = cache.remove(cacheKey)
+            ?: return Response
+                .status(Response.Status.ACCEPTED)
+                .entity(ResponseDto.error("Login attempts absent for user = $username")).build()
 
-            logger.info(">>>> Login attempt found for user = ${user.username}")
-            val loginAttempt = cache.remove(cacheKey)
-            if (loginAttempt != null) {
-                logger.info(">>>> Login attempt: $loginAttempt :: reset")
-                return Response
-                    .ok(ResponseDto.success("last record in body", loginAttempt)).build()
-            }
-        }
-        return Response
-            .status(Response.Status.NOT_FOUND)
-            .entity(ResponseDto.error("Login attempts not found for user = ${user.username}")).build()
+        val details = mapOf(
+            "action" to ACTION_UNLOCK_USER,
+            "userId" to user.id
+        )
+        createEvent(user, EventType.UPDATE_PROFILE, details)
+        adminEventBuilder.resource(ResourceType.USER)
+            .resourcePath(session.context.uri)
+            .operation(OperationType.ACTION)
+            .detail("username", username)
+            .detail("action", ACTION_UNLOCK_USER)
+            .authUser(auth.adminAuth()?.user)
+            .realm(realm)
+            .success()
+
+
+        logger.info(">>>> Login attempt reset for user = ${user.username}")
+        return Response.ok(ResponseDto.success("last record received", loginAttempt)).build()
     }
 
 
@@ -361,87 +334,49 @@ class CustomAdminResource(
      * логина или пароля - функционал brute force.
      * @param userId идентификатор пользователя
      */
-    @APIResponses(
-        APIResponse(
-            responseCode = "200",
-            description = "Login failures deleted",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "401",
-            description = "Unauthorized",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "403",
-            description = "Forbidden to query realm",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "400",
-            description = "Bad request, userId is invalid",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "404",
-            description = "User not found",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "204",
-            description = "Gone, user login failures absent",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        )
-    )
+    @APIResponses(value = [
+        APIResponse(responseCode = "200", description = "Login failures deleted"),
+        APIResponse(responseCode = "401", description = "Unauthorized"),
+        APIResponse(responseCode = "403", description = "Forbidden to manage realm"),
+        APIResponse(responseCode = "400", description = "Bad request, userId is invalid"),
+        APIResponse(responseCode = "404", description = "User not found"),
+        APIResponse(responseCode = "202", description = "User login failures absent")
+    ])
     @DELETE
     @Path("users/{userId}/login-failures")
     @Produces(MediaType.APPLICATION_JSON)
     fun deleteLoginFailures(@PathParam("userId") userId: String?): Response {
 
-        logger.info(">>>> Received request to unlock userId = $userId")
-        if (userId.isNullOrBlank()) {
-            return Response
-                .status(Response.Status.BAD_REQUEST)
-                .entity(ResponseDto.error("bad request userId = $userId")).build()
-        }
-
         auth.users().requireManage() // требуем роль для управления
+        val user = validateUser(userId, "to delete temporary lock")
 
-        val userModel = session.users().getUserById(realm, userId)
-            ?: return Response
-                .status(Response.Status.NOT_FOUND)
-                .entity(ResponseDto.error("user by userId = $userId not found")).build()
-
-        logger.info(">>>> User: ${userModel.username} found successfully")
-
+        val username = user.username ?: Constants.ANONYMOUS
         val failureProvider = session.loginFailures()
-        failureProvider.getUserLoginFailure(realm, userModel.id)
+        failureProvider.getUserLoginFailure(realm, user.id)
             ?: return Response
-                .status(Response.Status.NO_CONTENT)
-                .entity(ResponseDto.success("user userId = $userId has no locks")).build()
+                .status(Response.Status.ACCEPTED)
+                .entity(ResponseDto.success("Temporary locks absent for user = $username")).build()
 
-        failureProvider.removeUserLoginFailure(realm, userModel.id)
-        logger.info(">>>> User ${userModel.username} has been successfully unlocked")
+        failureProvider.removeUserLoginFailure(realm, user.id)
+        logger.info(">>>> Temporary lock was successfully deleted for user = $username")
 
         val details = mapOf(
-            "action" to "UNLOCK_USER",
-            "userId" to userModel.id
+            "action" to ACTION_UNLOCK_USER,
+            "userId" to user.id
         )
-        createEvent(userModel, EventType.UPDATE_PROFILE, details)
+        createEvent(user, EventType.UPDATE_PROFILE, details)
         adminEventBuilder.resource(ResourceType.USER)
             .resourcePath(session.context.uri)
             .operation(OperationType.ACTION)
-            .detail("username", userModel.username)
-            .detail("action", "UNLOCK_USER")
+            .detail("username", user.username)
+            .detail("action", ACTION_UNLOCK_USER)
             .authUser(auth.adminAuth()?.user)
             .realm(realm)
             .success()
 
         return Response
-            .ok(ResponseDto.success("user: ${userModel.username} unlocked successfully"))
-            .build()
+            .ok(ResponseDto.success("user: ${user.username} unlocked successfully")).build()
     }
-
 
 
     /**
@@ -449,75 +384,46 @@ class CustomAdminResource(
      * @param userId идентификатор пользователя
      * @return статус выполнения
      */
-    @APIResponses(
-        APIResponse(
-            responseCode = "200",
-            description = "User logout successful",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "401",
-            description = "Unauthorized",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "403",
-            description = "Forbidden to manage realm",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "400",
-            description = "Bad request, userId is invalid",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        ),
-        APIResponse(
-            responseCode = "404",
-            description = "User not found",
-            content = [Content(schema = Schema(implementation = Response::class))]
-        )
-    )
+    @APIResponses(value = [
+        APIResponse(responseCode = "200", description = "User logout successful"),
+        APIResponse(responseCode = "401", description = "Unauthorized"),
+        APIResponse(responseCode = "403", description = "Forbidden to manage realm"),
+        APIResponse(responseCode = "400", description = "Bad request, userId is invalid"),
+        APIResponse(responseCode = "404", description = "User not found")
+    ])
     @POST
     @Path("users/{userId}/logout")
     @Produces(MediaType.APPLICATION_JSON)
     fun logout(@PathParam("userId") userId: String?): Response {
 
-        logger.info(">>>> Received request with userId = $userId")
-        if (userId.isNullOrEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                .entity(ResponseDto.error("bad request userId = $userId")).build()
-        }
-        logger.info(">>>> Start check rights to manage Logout ")
         auth.users().requireManage() // требуем роль для управления
-
-        // проверяем наличие пользователя в keycloak, переданного по userId
-        val userModel = session.users().getUserById(realm, userId)
-            ?: return Response.status(Response.Status.NOT_FOUND)
-                .entity(ResponseDto.error("user with id = $userId not found")).build()
+        val user = validateUser(userId, "to logout")
 
         // завершаем все текущие сессии пользователя для рабочей области realm
-        session.sessions().removeUserSessions(realm, userModel)
+        session.sessions().removeUserSessions(realm, user)
 
 		// удаляем пользователя из кеша текущей рабочей области
-        session.getProvider(UserCache::class.java)?.evict(realm, userModel)
+        session.getProvider(UserCache::class.java)?.evict(realm, user)
 
+        val username = user.username ?: Constants.ANONYMOUS
         val details = mapOf(
             "payload" to "userId = $userId",
-            "action" to "LOGOUT"
+            "action" to ACTION_LOGOUT
         )
-        createEvent(userModel, EventType.LOGOUT, details)
+        createEvent(user, EventType.LOGOUT, details)
         adminEventBuilder.resource(ResourceType.USER)
             .operation(OperationType.ACTION)
             .resourcePath(session.context.uri)
             .detail("clientId", session.context.client.clientId)
-            .detail("username", userModel.username)
+            .detail("username", username)
             .detail("realm", realm.name)
-            .detail("action", "LOGOUT")
+            .detail("action", ACTION_LOGOUT)
             .authUser(auth.adminAuth()?.user)
             .realm(realm)
             .success()
 
         return Response.ok()
-            .entity(ResponseDto.success("user logged out from all sessions")).build()
+            .entity(ResponseDto.success("All sessions terminated for = $username")).build()
     }
 
 
@@ -553,5 +459,23 @@ class CustomAdminResource(
         }
     }
 
+    /**
+     * Проверяет наличие в keycloak заданного параметром пользователя
+     * @param userId идентификатор пользователя
+     * @return экземпляр класса UserModel
+     */
+    private fun validateUser(userId: String?, message: String?): UserModel {
+
+        logger.info(">>>> Received request :: $message :: for userId = $userId")
+        if (userId.isNullOrBlank()) {
+            throw BadRequestException("Bad request userId = <$userId>")
+        }
+
+        val user = session.users().getUserById(realm, userId)
+            ?: throw NotFoundException("user userId = <$userId> not found")
+
+        logger.info(">>>> User \"${user.username}\" found successfully")
+        return user
+    }
 
 }

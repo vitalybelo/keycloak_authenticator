@@ -1,7 +1,7 @@
 package keycloak.spi.brute_force_locker
 
 import keycloak.spi.constants.Constants
-import keycloak.spi.getCacheKey
+import keycloak.spi.utils.getCacheKey
 import org.jboss.logging.Logger
 import org.keycloak.authentication.AuthenticationFlowContext
 

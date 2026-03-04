@@ -1,10 +1,11 @@
-package keycloak.spi
+package keycloak.spi.utils
 
 import keycloak.spi.constants.Constants.Companion.BRUTE_FORCE_CACHE
 import keycloak.spi.event_listener.LoginAttempt
-import org.infinispan.Cache
 import org.keycloak.connections.infinispan.InfinispanConnectionProvider
 import org.keycloak.models.KeycloakSession
+import org.infinispan.Cache
+
 
 
 /**
@@ -19,3 +20,5 @@ fun getInfinispanLoginAttemptCache(session: KeycloakSession): Cache<String, Logi
         .getCache<String, LoginAttempt>(BRUTE_FORCE_CACHE)
     return cache
 }
+
+

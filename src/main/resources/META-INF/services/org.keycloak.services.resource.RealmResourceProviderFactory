@@ -1,1 +1,2 @@
 keycloak.spi.custom_resources.CustomResourceProviderFactory
+keycloak.spi.telegram.resource.TelegramResourceProviderFactory

@@ -3,3 +3,4 @@ keycloak.spi.enter_time_logics.EnterTimeAuthenticationFactory
 keycloak.spi.sms_code_otp.SmsAuthenticationFactory
 keycloak.spi.conditional_attribute.AttributeConditionalFactory
 keycloak.spi.brute_force_locker.PasswordFormLockerAuthenticationFactory
+keycloak.spi.telegram.auth.TelegramAuthenticatorFactory
