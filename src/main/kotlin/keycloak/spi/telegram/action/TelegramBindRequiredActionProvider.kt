@@ -20,6 +20,7 @@ class TelegramBindRequiredActionProvider(
         private val logger = Logger.getLogger(TelegramBindRequiredActionProvider::class.java)
     }
 
+
     /**
      * Этот метод проверяет наличие у пользователя атрибута для хранения chat id telegram
      * Если данный атрибут не найдет, автоматически пользователю назначается required action
@@ -29,13 +30,17 @@ class TelegramBindRequiredActionProvider(
         val chatId = context.user.getFirstAttribute(Constants.TELEGRAM_CHAT_ID_ATTRIBUTE)
         if (chatId == null) {
             context.authenticationSession.addRequiredAction(Constants.TELEGRAM_BIND_ACTION_ID)
+            logger.debug(">>>> evaluateTriggers() :: user chatId: $chatId")
+        } else {
+            logger.debug(">>>> evaluateTriggers() :: user should bind to telegram")
         }
     }
+
 
     /**
      * Выполняет генерацию uuid для первоначального запроса в telegram по привязке пользователя.
      * Сохраняет в атрибутах сессии этот uuid для последующего использования и вызывает форму привязки
-     * @param context контекст аутентификации
+     * @param context контекст потока аутентификации
      */
     override fun requiredActionChallenge(context: RequiredActionContext) {
 
@@ -52,33 +57,42 @@ class TelegramBindRequiredActionProvider(
         context.challenge(form)
     }
 
+
     /**
-     *
+     * Здесь мы проверяем, закончена ли требуемая акция по привязке аккаунта к telegram.
+     * Если форма отдает нам финальный сабмит, это означает что пользователь выполнил команду /start,
+     * и telegram вернул нам в webhook идентификатор пользователя из нашего боте аутентификации, который
+     * в методе получения webhook помещается в infinispan. Здесь мы вычитываем из кэша infinispan этот
+     * идентификатор и записываем его пользователю в атрибуты. Завершаемся успехом. Если финальный
+     * сабмит не получен, перерисовываем форму и продолжаем ждать пока не закончится привязка
+     * @param context контекст потока аутентификации
      */
     override fun processAction(context: RequiredActionContext) {
+
         val formData = context.httpRequest.decodedFormParameters
         val token = context.authenticationSession.getAuthNote("tg_token")
 
-        val cache = session.getProvider(InfinispanConnectionProvider::class.java)
+        val cache = session
+            .getProvider(InfinispanConnectionProvider::class.java)
             .getCache<String, String>(InfinispanConnectionProvider.WORK_CACHE_NAME)
 
-        // Обработка финального сабмита от формы
+        // обработка финального сабмита от формы
         if (formData.containsKey("final_submit")) {
-            // Достаем chatId напрямую из кэша (REST эндпоинт его не удалял, он просто проверял)
+            // достаем chatId напрямую из кэша (REST эндпоинт его не удалял, он просто проверял)
             val chatId = cache?.get(token)
 
             if (chatId != null) {
-                // Сохраняем Telegram ID в БД пользователя
+                // сохраняем Telegram ID в БД пользователя
                 context.user.setSingleAttribute(Constants.TELEGRAM_CHAT_ID_ATTRIBUTE, chatId)
 
-                // Подчищаем за собой
+                // подчищаем за собой
                 cache.remove(token)
                 context.authenticationSession.removeAuthNote("tg_token")
 
-                // Успех! Пропускаем пользователя дальше
+                // успех! Пропускаем пользователя дальше
                 context.success()
             } else {
-                // Если почему-то submit пришел, а в кэше пусто - возвращаем форму с ошибкой
+                // если почему-то submit пришел, а в кэше пусто - возвращаем форму с ошибкой
                 val form = context.form()
                     .setAttribute("tgToken", token)
                     .setError("Ошибка привязки. Попробуйте еще раз.")
@@ -88,12 +102,15 @@ class TelegramBindRequiredActionProvider(
             return
         }
 
-        // Если форма отправлена некорректно, рисуем ее заново
-        val form = context.form().setAttribute("tgToken", token).createForm("telegram-bind.ftl")
+        // если форма отправлена некорректно, рисуем ее заново
+        val form = context.form()
+            .setAttribute("tgToken", token)
+            .createForm("telegram-bind.ftl")
+
         context.challenge(form)
     }
 
     override fun close() {
-        // Освобождение ресурсов провайдера (если есть)
+        // освобождение ресурсов провайдера (если есть)
     }
 }

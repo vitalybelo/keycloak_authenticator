@@ -13,7 +13,6 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import javax.management.timer.Timer
 
 /**
  * Провайдер аутентификатора ввода временного кода 2FA отправленного через telegram
@@ -23,6 +22,7 @@ class TelegramAuthenticator : Authenticator {
 
     companion object {
         private val logger = Logger.getLogger(TelegramAuthenticator::class.java)
+        private const val ONE_SECOND = 1000L
     }
     private val botSecretToken = Constants.TELEGRAM_BOT_TOKEN
     private val client = HttpClient.newHttpClient()
@@ -31,14 +31,14 @@ class TelegramAuthenticator : Authenticator {
      * Вначале генерится шестизначный секретный код для отправки в телеграм. Код сохраняется в атрибутах
      * сессии аутентификации для проверки в методе action. Затем вызывается метод отправки сообщения пользователю
      * по chat_id (заранее извлеченному из атрибутов). Затем создаем форму ввода временного кода и завершаем
-     * работу, управление передается в метод action()
+     * работу, управление передается в метод action() и продолжается там до успешного ввода.
      * @param context контекст аутентификации
      */
     override fun authenticate(context: AuthenticationFlowContext) {
 
         val config = TelegramAuthenticationConfig.init(context)
 
-        if (!config.isSwitchedOn) { // выходим успешно, если проверка вход 2FA через telegram отключен
+        if (!config.isSwitchedOn) { // выходим успешно, если вход 2FA через telegram отключен
             context.success()
             return
         }
@@ -47,8 +47,8 @@ class TelegramAuthenticator : Authenticator {
 
         // опишу магию, которая находится внизу класса, а именно configuredFor() и setRequiredActions()
         // итак, метод configuredFor() проверяет, есть ли у пользователя нужный атрибут для входа через telegram
-        // если атрибут есть, все нормально, мы попадаем в метод authenticate() и выполняем проверку входа
-        // если атрибута нет, сработает магия keycloak, он автоматически вызовет метод setRequiredActions(),
+        // если атрибут есть, все нормально, мы попадаем в метод authenticate() и выполняем проверку входа,
+        // но если атрибута нет, сработает магия keycloak, он автоматически вызовет метод setRequiredActions(),
         // который установит обязательное выполнение требуемой акции TelegramBindRequiredActionFactory, по
         // привязке пользователя к telegram, но после этого authenticate() уже не будет вызван
         // единственное условие - наш аутентификатор должен иметь режим REQUIRED
@@ -84,7 +84,7 @@ class TelegramAuthenticator : Authenticator {
         // проверяем ttl временного кода
         val createTime = createTimeString.toLongOrNull() ?: 0L
         val config = TelegramAuthenticationConfig.init(context)
-        val isExpired = (System.currentTimeMillis() - createTime) > (config.ttlSeconds * Timer.ONE_SECOND)
+        val isExpired = (System.currentTimeMillis() - createTime) > (config.ttlSeconds * ONE_SECOND)
 
         if (expectedCode == null || isExpired) {
             // обновляем код, отправляем в бот, создаем форму и запускаем челендж
@@ -189,8 +189,9 @@ class TelegramAuthenticator : Authenticator {
         return !user.getFirstAttribute(Constants.TELEGRAM_CHAT_ID_ATTRIBUTE).isNullOrEmpty()
     }
 
-    // е configuredFor вернул false, а аутентификатор обязателен,
-    // keycloak сам вызовет этот метод, чтобы повесить нужный нам экшен - магия механизма Keycloak
+
+    // если configuredFor вернул false, а аутентификатор обязателен - сработает условие из-под капота,
+    // а именно, keycloak сам вызовет этот метод, чтобы повесить нужный нам экшен - магия механизма Keycloak
     override fun setRequiredActions(session: KeycloakSession, realm: RealmModel, user: UserModel) {
         user.addRequiredAction(Constants.TELEGRAM_BIND_ACTION_ID)
     }

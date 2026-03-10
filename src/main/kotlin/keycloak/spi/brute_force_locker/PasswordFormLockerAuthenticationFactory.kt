@@ -109,6 +109,22 @@ class PasswordFormLockerAuthenticationFactory : AuthenticatorFactory {
             .defaultValue(Constants.BF_CONFIG_QUICK_BLOCK_VALUE)
             .add()
 
+            .property()
+            .name(Constants.BF_CONFIG_CRITICAL_FAILURES_KEY)
+            .label("critical failures numbers")
+            .type(ProviderConfigProperty.INTEGER_TYPE)
+            .helpText("Сколько ошибок входа на определенной время считать критическим")
+            .defaultValue(Constants.BF_CONFIG_CRITICAL_FAILURES_VALUE)
+            .add()
+
+            .property()
+            .name(Constants.BF_CONFIG_CRITICAL_WINDOW_KEY)
+            .label("critical time window minutes")
+            .type(ProviderConfigProperty.INTEGER_TYPE)
+            .helpText("Период времени в минутах, за который считаются критические ошибки")
+            .defaultValue(Constants.BF_CONFIG_CRITICAL_WINDOW_VALUE)
+            .add()
+
             .build()
             .also {
                 logger.info("Initialize configuration properties :: Brute Force login failures logic")

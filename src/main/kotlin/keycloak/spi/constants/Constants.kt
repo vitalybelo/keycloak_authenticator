@@ -42,6 +42,11 @@ class Constants {
         const val BF_CONFIG_QUICK_CHECK_VALUE = 1000L
         const val BF_CONFIG_QUICK_BLOCK_KEY = "quick_block_minutes"
         const val BF_CONFIG_QUICK_BLOCK_VALUE = 1L
+        const val BF_CONFIG_CRITICAL_FAILURES_KEY = "critical_failures"
+        const val BF_CONFIG_CRITICAL_FAILURES_VALUE = 20
+        const val BF_CONFIG_CRITICAL_WINDOW_KEY = "critical_window"
+        const val BF_CONFIG_CRITICAL_WINDOW_VALUE = 1L
+
 
         const val UNKNOWN_REALM = "unknown_realm"
         const val UNKNOWN_USER = "unknown_user"
@@ -58,6 +63,7 @@ class Constants {
         const val TELEGRAM_CHAT_ID_ATTRIBUTE = "telegram_chat_id"
         const val TELEGRAM_AUTH_NOTE_CODE = "telegram_code"
         const val TELEGRAM_AUTH_NOTE_TIME = "telegram_time_millis"
+
 
     }
 }
