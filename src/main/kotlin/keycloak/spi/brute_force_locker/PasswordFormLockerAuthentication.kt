@@ -69,7 +69,7 @@ class PasswordFormLockerAuthentication(
             val attempt = cache[lockerConfig.cacheKey]
 
             if (attempt != null) {
-                if (attempt.isBlocked) {
+                if (attempt.blockType.isBlocked()) {
                     attempt.displayBlockedMessage(lockerConfig)
                     return true
                 } else {

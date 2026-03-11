@@ -54,9 +54,8 @@ class BlockLockedUserProtocolMapper: AbstractOIDCProtocolMapper(), OIDCAccessTok
 
         // проверяем наличие записи о блокировке в кэш Infinispan
         logger.debug(">>>> checkLockoutAndKillSessions(): start for user = ${user.username}")
-        val isUserLocked = isLockedInInfinispan(session, user)
 
-        if (isUserLocked) {
+        if (isLockedInInfinispan(session, user)) {
             // пользователь заблокирован, убиваем ВСЕ активные сессии этого пользователя
             logger.warn(">>>> checkLockoutAndKillSessions(): kill all sessions for user = ${user.username}")
             session.sessions().removeUserSessions(realm, user)
@@ -89,8 +88,8 @@ class BlockLockedUserProtocolMapper: AbstractOIDCProtocolMapper(), OIDCAccessTok
         val cache = getInfinispanLoginAttemptCache(session)
         val attempt = cache[cacheKey]
         if (attempt != null) {
-            logger.debug(">>>> isLockedInInfinispan(): userId = ${user.username} :: attempt = $attempt")
-            return attempt.isBlocked
+            logger.debug(">>>> isLockedInInfinispan(): userId = ${user.username} :: failures = ${attempt.failures.size}")
+            return attempt.blockType.isBlocked()
         }
         return false
     }

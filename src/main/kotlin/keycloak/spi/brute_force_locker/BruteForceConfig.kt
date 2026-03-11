@@ -25,9 +25,10 @@ data class BruteForceConfig(
     val maxFailures: Int = Constants.BF_CONFIG_MAX_FAILURES_VALUE,
     val blockDurationMinutes: Long = Constants.BF_CONFIG_BLOCK_MINUTES_VALUE,
     val resetDurationMinutes: Long = Constants.BF_CONFIG_RESET_MINUTES_VALUE,
+
     val quickLoginCheckInMillis: Long = Constants.BF_CONFIG_QUICK_CHECK_VALUE,
-    val quickLoginBlockInMinutes: Long = Constants.BF_CONFIG_QUICK_BLOCK_VALUE,
 
     val criticalFailuresThreshold: Int = Constants.BF_CONFIG_CRITICAL_FAILURES_VALUE,
-    val criticalTimeWindowMinutes: Long = Constants.BF_CONFIG_CRITICAL_WINDOW_VALUE
+    val criticalTimeWindowMinutes: Long = Constants.BF_CONFIG_CRITICAL_WINDOW_VALUE,
+    val criticalBlockInMinutes: Long = Constants.BF_CONFIG_CRITICAL_BLOCK_VALUE
 )

@@ -1,5 +1,6 @@
 package keycloak.spi.event_listener
 
+import keycloak.spi.brute_force_locker.BlockType
 import keycloak.spi.brute_force_locker.BruteForceLockerConfig
 import org.jboss.logging.Logger
 import java.io.Serializable
@@ -7,9 +8,8 @@ import java.util.concurrent.TimeUnit
 
 data class LoginAttempt(
 
-    val failures: Int = 0,
-    val isBlocked: Boolean = false,
-    val lastFailure: Long? = null,
+    val failures: List<Long> = emptyList(),
+    val blockType: BlockType = BlockType.NONE,
     var blockInMinutes: Long = 0L
 
 ) : Serializable {
@@ -19,13 +19,12 @@ data class LoginAttempt(
     }
 
     fun displayLoginAttempts() {
-
         logger.debug(""">>>>
             | Saved login errors attempts
             | ------------------------------------
-            | failures = $failures
-            | is blocked = $isBlocked
-            | lastFailure = $lastFailure
+            | block type = ${blockType.name}
+            | failures count = ${failures.size}
+            | blockInMinutes = $blockInMinutes
             | ------------------------------------
             """.trimIndent()
         )
@@ -34,8 +33,7 @@ data class LoginAttempt(
     fun displayBlockedMessage(lockerConfig: BruteForceLockerConfig) {
 
         val totalInMillis = TimeUnit.MINUTES.toMillis(blockInMinutes)
-        val lastFailure = lastFailure ?: System.currentTimeMillis()
-        val spentInMillis = System.currentTimeMillis() - lastFailure
+        val spentInMillis = System.currentTimeMillis() - failures.last()
         val remainder = totalInMillis - spentInMillis
 
         if (remainder > 0) {

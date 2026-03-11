@@ -1,5 +1,6 @@
 package keycloak.spi.event_listener
 
+import keycloak.spi.brute_force_locker.BlockType
 import keycloak.spi.brute_force_locker.BruteForceConfig
 import keycloak.spi.constants.Constants
 import keycloak.spi.utils.getCacheKey
@@ -79,59 +80,78 @@ class CustomEventListenerProvider(
         val realmId = event.realmId ?: return
 
         val config = bruteForceConfiguration()
-        val cacheKey = getCacheKey(realmId, userId)
+        if (!config.isSwitchedOn) return
 
+        val cacheKey = getCacheKey(realmId, userId)
         val cache = getInfinispanLoginAttemptCache(session)
 
-        var isQuickLogin = false
-        var isBlocked = false
         val attempt = cache.compute(cacheKey) { _, currentAttempt ->
 
             val currentMillis = System.currentTimeMillis()
-            val newFailures = (currentAttempt?.failures ?: 0) + 1
-            val lastFailure = currentAttempt?.lastFailure ?: currentMillis
-            if (newFailures > 1) {
-                isQuickLogin = (currentMillis - lastFailure) <= config.quickLoginCheckInMillis
+            val previousBlockType = currentAttempt?.blockType ?: BlockType.NONE // Запоминаем прошлый статус
+
+            val newFailures = (currentAttempt?.failures ?: emptyList()).takeLast(50).toMutableList()
+            newFailures.add(currentMillis)
+
+            val validWindowInMillis = TimeUnit.MINUTES.toMillis(config.criticalTimeWindowMinutes)
+            val lastValidFailureInMillis = currentMillis - validWindowInMillis
+            val filteredCount = newFailures.count { it > lastValidFailureInMillis }
+            val failuresCount = newFailures.size
+
+            var blockInMinutes: Long
+            var blockType: BlockType
+            when {
+                // если уже был CRITICAL или только что достигли порога
+                previousBlockType == BlockType.CRITICAL || filteredCount >= config.criticalFailuresThreshold -> {
+                    blockType = BlockType.CRITICAL
+                    blockInMinutes = config.criticalBlockInMinutes
+                    logger.debug(">>>> CRITICAL failures: $filteredCount")
+                }
+                // если уже был TEMPORARY или только что достигли лимита
+                previousBlockType == BlockType.TEMPORARY || failuresCount >= config.maxFailures -> {
+                    blockType = BlockType.TEMPORARY
+                    blockInMinutes = config.blockDurationMinutes
+                    logger.debug(">>>> TEMPORARY failures: $failuresCount")
+                }
+                // проверка на "быстрый вход"
+                newFailures.size > 1 && (newFailures.last() - newFailures[newFailures.size - 2] <= config.quickLoginCheckInMillis) -> {
+                    blockType = BlockType.TEMPORARY
+                    blockInMinutes = config.blockDurationMinutes
+                    logger.debug(">>>> QUICK LOGIN failures with total: $failuresCount")
+                }
+
+                else -> {
+                    blockType = BlockType.NONE
+                    blockInMinutes = 0L
+                }
             }
-            isBlocked = newFailures >= config.maxFailures
 
             logger.debug(""">>>>
                 | Login error compilation
                 | -------------------------------------
-                | currentMillis: $currentMillis
-                | newFailures: $newFailures
-                | lastFailure: $lastFailure
-                | isQuickBlocked: $isQuickLogin
-                | isManualBlocked: $isBlocked
+                | total failures: $failuresCount
+                | block type: $blockType
+                | block time: $blockInMinutes minutes
+                | is blocked: ${blockType.isBlocked()}
                 | -------------------------------------
             """.trimIndent()
             )
+
             LoginAttempt(
                 failures = newFailures,
-                isBlocked = isQuickLogin || isBlocked,
-                lastFailure = System.currentTimeMillis()
+                blockType = blockType,
+                blockInMinutes = blockInMinutes
             )
         }
 
-        // Устанавливаем блокировку в зависимости от флага isBlocked
+        // Устанавливаем блокировку в зависимости от статуса blockType
         if (attempt != null) {
-            if (attempt.isBlocked) {
-                // вычисляем на какое время блокировать пользователя
-                attempt.blockInMinutes =
-                    if (isQuickLogin) {
-                        if (isBlocked) {
-                            config.quickLoginBlockInMinutes + config.blockDurationMinutes
-                        } else {
-                            config.quickLoginBlockInMinutes
-                        }
-                    } else {
-                        config.blockDurationMinutes
-                    }
+            if (attempt.blockType.isBlocked()) {
                 logger.debug(""">>>>
                     | ---------------------------------------------------------------------------------------------
                     | ATTENTION !!!
                     |
-                    | Блокировка на ${attempt.blockInMinutes} минут, после ${attempt.failures} попыток:
+                    | Блокировка на ${attempt.blockInMinutes} минут, после ${attempt.failures.size} попыток:
                     | Пользователь = ${event.userId}
                     | ---------------------------------------------------------------------------------------------
                     """.trimIndent()
@@ -189,7 +209,9 @@ class CustomEventListenerProvider(
         val blockMinutes = configMap[Constants.BF_CONFIG_BLOCK_MINUTES_KEY]?.toLong() ?: Constants.BF_CONFIG_BLOCK_MINUTES_VALUE
         val resetMinutes = configMap[Constants.BF_CONFIG_RESET_MINUTES_KEY]?.toLong() ?: Constants.BF_CONFIG_RESET_MINUTES_VALUE
         val quickLoginMillis = configMap[Constants.BF_CONFIG_QUICK_CHECK_KEY]?.toLong() ?: Constants.BF_CONFIG_QUICK_CHECK_VALUE
-        val quickBlockMinutes = configMap[Constants.BF_CONFIG_QUICK_BLOCK_KEY]?.toLong() ?: Constants.BF_CONFIG_QUICK_BLOCK_VALUE
+        val criticalFailures = configMap[Constants.BF_CONFIG_CRITICAL_FAILURES_KEY]?.toInt() ?: Constants.BF_CONFIG_CRITICAL_FAILURES_VALUE
+        val criticalWindowInMinutes = configMap[Constants.BF_CONFIG_CRITICAL_WINDOW_KEY]?.toLong() ?: Constants.BF_CONFIG_CRITICAL_WINDOW_VALUE
+        val criticalBlockInMinutes = configMap[Constants.BF_CONFIG_CRITICAL_BLOCK_KEY]?.toLong() ?: Constants.BF_CONFIG_CRITICAL_BLOCK_VALUE
 
         logger.debug(""">>>>
             | Brute force configuration found
@@ -199,16 +221,21 @@ class CustomEventListenerProvider(
             | blockDurationMinutes = $blockMinutes
             | resetDurationMinutes = $resetMinutes
             | quickLoginMillis = $quickLoginMillis
-            | quickBlockMinutes = $quickBlockMinutes
+            | criticalFailures = $criticalFailures
+            | criticalWindowMinutes = $criticalWindowInMinutes
+            | criticalBlockMinutes = $criticalBlockInMinutes
         """.trimIndent()
         )
+
         return BruteForceConfig(
             isSwitchedOn = isSwitchedOn,
             maxFailures = maxFailures,
             blockDurationMinutes = blockMinutes,
             resetDurationMinutes = resetMinutes,
             quickLoginCheckInMillis = quickLoginMillis,
-            quickLoginBlockInMinutes = quickBlockMinutes
+            criticalFailuresThreshold = criticalFailures,
+            criticalTimeWindowMinutes = criticalWindowInMinutes,
+            criticalBlockInMinutes = criticalBlockInMinutes
         )
     }
 

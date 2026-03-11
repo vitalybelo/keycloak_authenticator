@@ -12,9 +12,9 @@ data class BruteForceLockerConfig(
     val blockDurationMinutes: Long,
     val resetDurationMinutes: Long,
     val quickLoginCheckMillis: Long,
-    val quickLoginBlockMinutes: Long,
     val criticalFailures: Int,
     val criticalWindow: Long,
+    val criticalBlockMinutes: Long,
     val isRequired: Boolean,
     val username: String,
     val realmId: String,
@@ -41,9 +41,9 @@ data class BruteForceLockerConfig(
                 blockDurationMinutes = config?.config?.get(Constants.BF_CONFIG_BLOCK_MINUTES_KEY)?.toLong() ?: Constants.BF_CONFIG_BLOCK_MINUTES_VALUE,
                 resetDurationMinutes = config?.config?.get(Constants.BF_CONFIG_RESET_MINUTES_KEY)?.toLong() ?: Constants.BF_CONFIG_RESET_MINUTES_VALUE,
                 quickLoginCheckMillis = config?.config?.get(Constants.BF_CONFIG_QUICK_CHECK_KEY)?.toLong() ?: Constants.BF_CONFIG_QUICK_CHECK_VALUE,
-                quickLoginBlockMinutes = config?.config?.get(Constants.BF_CONFIG_QUICK_BLOCK_KEY)?.toLong() ?: Constants.BF_CONFIG_QUICK_BLOCK_VALUE,
                 criticalFailures = config?.config?.get(Constants.BF_CONFIG_CRITICAL_FAILURES_KEY)?.toInt() ?: Constants.BF_CONFIG_CRITICAL_FAILURES_VALUE,
                 criticalWindow = config?.config?.get(Constants.BF_CONFIG_CRITICAL_WINDOW_KEY)?.toLong() ?: Constants.BF_CONFIG_CRITICAL_WINDOW_VALUE,
+                criticalBlockMinutes = config?.config?.get(Constants.BF_CONFIG_CRITICAL_BLOCK_KEY)?.toLong() ?: Constants.BF_CONFIG_CRITICAL_BLOCK_VALUE,
                 isRequired = context.execution?.isRequired ?: true,
                 username = username,
                 realmId = realmId,
@@ -51,7 +51,7 @@ data class BruteForceLockerConfig(
                 cacheKey = cacheKey
             )
 
-            logger.debug(""">>>> 
+            logger.trace(""">>>> 
                 | Authentication start with config
                 | ---------------------------------------------------------------------
                 | Username = $username 
@@ -62,7 +62,9 @@ data class BruteForceLockerConfig(
                 | blockDurationMinutes = ${bruteForceLockerConfig.blockDurationMinutes}
                 | resetDurationMinutes = ${bruteForceLockerConfig.resetDurationMinutes}
                 | quickLoginCheckMillis = ${bruteForceLockerConfig.quickLoginCheckMillis}
-                | quickLoginBlockMinutes = ${bruteForceLockerConfig.quickLoginBlockMinutes}
+                | criticalFailures = ${bruteForceLockerConfig.criticalFailures}
+                | criticalWindow = ${bruteForceLockerConfig.criticalWindow}
+                | criticalBlockMinutes = ${bruteForceLockerConfig.criticalBlockMinutes}
                 | isRequired = ${bruteForceLockerConfig.isRequired}
                 | ---------------------------------------------------------------------
             """.trimIndent()

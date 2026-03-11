@@ -102,18 +102,10 @@ class PasswordFormLockerAuthenticationFactory : AuthenticatorFactory {
             .add()
 
             .property()
-            .name(Constants.BF_CONFIG_QUICK_BLOCK_KEY)
-            .label("Quick login block in minutes")
-            .type(ProviderConfigProperty.INTEGER_TYPE)
-            .helpText("Время в минутах, на которое блокируется пользователь после попытки быстрого входа")
-            .defaultValue(Constants.BF_CONFIG_QUICK_BLOCK_VALUE)
-            .add()
-
-            .property()
             .name(Constants.BF_CONFIG_CRITICAL_FAILURES_KEY)
             .label("critical failures numbers")
             .type(ProviderConfigProperty.INTEGER_TYPE)
-            .helpText("Сколько ошибок входа на определенной время считать критическим")
+            .helpText("Сколько ошибок входа (N) за определенный период времени (Т) считать критическим")
             .defaultValue(Constants.BF_CONFIG_CRITICAL_FAILURES_VALUE)
             .add()
 
@@ -121,8 +113,16 @@ class PasswordFormLockerAuthenticationFactory : AuthenticatorFactory {
             .name(Constants.BF_CONFIG_CRITICAL_WINDOW_KEY)
             .label("critical time window minutes")
             .type(ProviderConfigProperty.INTEGER_TYPE)
-            .helpText("Период времени в минутах, за который считаются критические ошибки")
+            .helpText("Период времени (T) в минутах, внутри которого (N) количество ошибок считаются критическими")
             .defaultValue(Constants.BF_CONFIG_CRITICAL_WINDOW_VALUE)
+            .add()
+
+            .property()
+            .name(Constants.BF_CONFIG_CRITICAL_BLOCK_KEY)
+            .label("Critical block in minutes")
+            .type(ProviderConfigProperty.INTEGER_TYPE)
+            .helpText("Время в минутах, на которое блокируется пользователь при критических ошибках входа")
+            .defaultValue(Constants.BF_CONFIG_CRITICAL_BLOCK_VALUE)
             .add()
 
             .build()

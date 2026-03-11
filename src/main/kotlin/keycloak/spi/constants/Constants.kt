@@ -37,15 +37,15 @@ class Constants {
         const val BF_CONFIG_BLOCK_MINUTES_KEY = "block_minutes"
         const val BF_CONFIG_BLOCK_MINUTES_VALUE = 10L
         const val BF_CONFIG_RESET_MINUTES_KEY = "reset_minutes"
-        const val BF_CONFIG_RESET_MINUTES_VALUE = 120L
+        const val BF_CONFIG_RESET_MINUTES_VALUE = 60L
         const val BF_CONFIG_QUICK_CHECK_KEY = "quick_login_interval"
         const val BF_CONFIG_QUICK_CHECK_VALUE = 1000L
-        const val BF_CONFIG_QUICK_BLOCK_KEY = "quick_block_minutes"
-        const val BF_CONFIG_QUICK_BLOCK_VALUE = 1L
         const val BF_CONFIG_CRITICAL_FAILURES_KEY = "critical_failures"
         const val BF_CONFIG_CRITICAL_FAILURES_VALUE = 20
         const val BF_CONFIG_CRITICAL_WINDOW_KEY = "critical_window"
         const val BF_CONFIG_CRITICAL_WINDOW_VALUE = 1L
+        const val BF_CONFIG_CRITICAL_BLOCK_KEY = "critical_block"
+        const val BF_CONFIG_CRITICAL_BLOCK_VALUE = 20L
 
 
         const val UNKNOWN_REALM = "unknown_realm"
