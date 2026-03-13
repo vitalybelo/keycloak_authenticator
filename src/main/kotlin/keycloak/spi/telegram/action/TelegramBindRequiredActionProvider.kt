@@ -27,12 +27,12 @@ class TelegramBindRequiredActionProvider(
      */
     override fun evaluateTriggers(context: RequiredActionContext) {
 
-        val chatId = context.user.getFirstAttribute(Constants.TELEGRAM_CHAT_ID_ATTRIBUTE)
+        val chatId = context.user?.getFirstAttribute(Constants.TELEGRAM_CHAT_ID_ATTRIBUTE)
         if (chatId == null) {
             context.authenticationSession.addRequiredAction(Constants.TELEGRAM_BIND_ACTION_ID)
-            logger.debug(">>>> evaluateTriggers() :: user chatId: $chatId")
-        } else {
             logger.debug(">>>> evaluateTriggers() :: user should bind to telegram")
+        } else {
+            logger.debug(">>>> evaluateTriggers() :: user chatId: [$chatId] provided")
         }
     }
 
@@ -46,7 +46,7 @@ class TelegramBindRequiredActionProvider(
 
         // генерируем uuid для привязки, его добавим в /start ***
         val token = UUID.randomUUID().toString()
-        context.authenticationSession.setAuthNote("tg_token", token)
+        context.authenticationSession.setAuthNote(Constants.TELEGRAM_TOKEN_KEY, token)
         logger.debug(">>>> Start procedure binding to telegram with token = $token")
 
         // создаем форму и передаем туда токен (чтобы FTL сгенерировал QR и ссылку)
@@ -70,7 +70,7 @@ class TelegramBindRequiredActionProvider(
     override fun processAction(context: RequiredActionContext) {
 
         val formData = context.httpRequest.decodedFormParameters
-        val token = context.authenticationSession.getAuthNote("tg_token")
+        val token = context.authenticationSession.getAuthNote(Constants.TELEGRAM_TOKEN_KEY)
 
         val cache = session
             .getProvider(InfinispanConnectionProvider::class.java)
@@ -87,7 +87,7 @@ class TelegramBindRequiredActionProvider(
 
                 // подчищаем за собой
                 cache.remove(token)
-                context.authenticationSession.removeAuthNote("tg_token")
+                context.authenticationSession.removeAuthNote(Constants.TELEGRAM_TOKEN_KEY)
 
                 // успех! Пропускаем пользователя дальше
                 context.success()

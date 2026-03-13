@@ -22,30 +22,20 @@ class AttributeConditionalFactory : ConditionalAuthenticatorFactory {
     companion object {
         private const val PROVIDER_ID = "check_attribute_condition"
         private val logger = Logger.getLogger(AttributeConditionalFactory::class.java)
+        private val SINGLETON = AttributeConditional()
     }
 
     override fun getSingleton(): ConditionalAuthenticator {
-        return AttributeConditional.SINGLETON
+        return SINGLETON
     }
 
-    override fun getDisplayType(): String {
-        return "Condition - check user attribute"
-    }
-
-    override fun isConfigurable(): Boolean {
-        return true
-    }
+    override fun getDisplayType(): String = "Condition - check user attribute"
+    override fun isConfigurable(): Boolean = true
+    override fun isUserSetupAllowed(): Boolean = false
+    override fun getHelpText(): String = "Flow is executed only if the user attribute exists and has the expected one of defined values"
 
     override fun getRequirementChoices(): Array<Requirement?> {
         return arrayOf(Requirement.REQUIRED, Requirement.DISABLED)
-    }
-
-    override fun isUserSetupAllowed(): Boolean {
-        return false
-    }
-
-    override fun getHelpText(): String {
-        return "Flow is executed only if the user attribute exists and has the expected one of defined values"
     }
 
     override fun getConfigProperties(): List<ProviderConfigProperty?>? {
@@ -68,19 +58,19 @@ class AttributeConditionalFactory : ConditionalAuthenticatorFactory {
             .add()
 
             .property()
-            .name(Constants.ATTRIBUTE_GROUPS)
+            .name(Constants.ATTRIBUTE_GROUPS_KEY)
             .label("Include groups attributes")
             .type(ProviderConfigProperty.BOOLEAN_TYPE)
             .helpText("Если установлено \"ON\" - будем искать еще совпадения в атрибутах групп, которые назначены пользователю")
-            .defaultValue(false)
+            .defaultValue(Constants.ATTRIBUTE_GROUPS_VALUE)
             .add()
 
             .property()
-            .name(Constants.NATIVE_ENABLED)
-            .label("Native output")
+            .name(Constants.NEGATE_ENABLED_KEY)
+            .label("Negate output")
             .type(ProviderConfigProperty.BOOLEAN_TYPE)
             .helpText("Если установлено \"ON\" - в случае несовпадения условий, результат будет TRUE")
-            .defaultValue(false)
+            .defaultValue(Constants.NEGATE_ENABLED_VALUE)
 
             .add().build()
             .also {

@@ -18,7 +18,7 @@ data class LoginAttempt(
         private val logger = Logger.getLogger(LoginAttempt::class.java)
     }
 
-    fun displayLoginAttempts() {
+    fun display() {
         logger.debug(""">>>>
             | Saved login errors attempts
             | ------------------------------------
@@ -30,7 +30,7 @@ data class LoginAttempt(
         )
     }
 
-    fun displayBlockedMessage(lockerConfig: BruteForceLockerConfig) {
+    fun displayBlockoutMessage(lockerConfig: BruteForceLockerConfig) {
 
         val totalInMillis = TimeUnit.MINUTES.toMillis(blockInMinutes)
         val spentInMillis = System.currentTimeMillis() - failures.last()

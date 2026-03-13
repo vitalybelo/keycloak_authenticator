@@ -1,6 +1,5 @@
 package keycloak.spi.conditional_attribute
 
-import keycloak.spi.utils.AuthenticationUtils
 import org.jboss.logging.Logger
 import org.keycloak.authentication.AuthenticationFlowContext
 import org.keycloak.authentication.authenticators.conditional.ConditionalAuthenticator
@@ -9,12 +8,10 @@ import org.keycloak.models.RealmModel
 import org.keycloak.models.UserModel
 
 
-class AttributeConditional(): ConditionalAuthenticator {
+class AttributeConditional: ConditionalAuthenticator {
 
     companion object {
-        val SINGLETON: AttributeConditional = AttributeConditional()
         private val logger = Logger.getLogger(AttributeConditional::class.java)
-        private val authenticationUtils = AuthenticationUtils()
     }
 
 
@@ -33,65 +30,57 @@ class AttributeConditional(): ConditionalAuthenticator {
      */
     override fun matchCondition(context: AuthenticationFlowContext?): Boolean {
 
-        authenticationUtils.contextEnabledOrNull(context) ?: return false
-        val user = context!!.user ?: return false
+        if (context == null || context.user == null) return false
 
-        val attributeConfig = AttributeAuthConfig(context)
-        if (attributeConfig.isConfigNotPresented()) {
-            logger.error(">>>> CRITICAL :: Authentication config is not presented. >>>>")
+        val user = context.user
+        val attributeConfig = AttributeAuthConfig.init(context)
+
+        if (attributeConfig.isNullOrEmpty()) {
+            logger.error(">>>> Authentication config is not presented. >>>>")
             return false
         }
-        val isNative = attributeConfig.isNative!!
-        val expectedAttributeName = attributeConfig.attributeName!!
-        val expectedAttributeList = attributeConfig.attributeValues!!
+        val isNegate = attributeConfig.isNegate
+        val expectedAttributeName = attributeConfig.attributeName
+        val expectedAttributeList = attributeConfig.attributeValues
 
         // пробуем найти нужный атрибут и значение в учётной записи пользователя
         user.getFirstAttribute(expectedAttributeName)?.let { foundValue ->
 
-            val message = ">>>> Found user attribute \"$expectedAttributeName\" = [$foundValue]"
             if (expectedAttributeList.contains(foundValue)) {
-                logger.info(">>>> $message is matched conditional")
-                return !isNative
+                logger.debug(">>>> Found user attribute \"$expectedAttributeName\" = [$foundValue] is matched conditional")
+                return !isNegate
             } else {
-                logger.info(">>>> $message does not match conditional")
+                logger.debug(">>>> User attribute \"$expectedAttributeName\" = [$foundValue] does not match conditional = $expectedAttributeList")
             }
         }
         // пробуем найти нужный атрибут в любой из групп, назначенных пользователю
-        var attributeValue: String? = null
-        if (attributeConfig.isGroups == true) {
-            val isFoundInGroups = user.groupsStream.anyMatch {
-                groupModel ->
-                attributeValue = groupModel.getFirstAttribute(expectedAttributeName)
-                attributeValue != null && expectedAttributeList.contains(attributeValue)
-            }
-            val message = ">>>> Found group attribute \"$expectedAttributeName\" = [$attributeValue]"
-            if (isFoundInGroups) {
-                logger.info(">>>> $message is matched conditional")
-                return !isNative
+        if (attributeConfig.isGroups) {
+
+            // ищем первую группу у пользователя в которой есть нужный атрибут с нужным значением
+            val matchedGroup = user.groupsStream
+                .filter { groupModel ->
+                    val value = groupModel.getFirstAttribute(expectedAttributeName)
+                    value != null && expectedAttributeList.contains(value)
+                }
+                .findFirst()
+                .orElse(null)
+
+            if (matchedGroup != null) {
+                // нашли, отображаем сообщение и выходим
+                val matchedValue = matchedGroup.getFirstAttribute(expectedAttributeName)
+                logger.debug(">>>> Found group attribute \"$expectedAttributeName\" = [$matchedValue] is matched conditional = $expectedAttributeList")
+                return !isNegate
             } else {
-                logger.info(">>>> $message does not match conditional")
+                logger.debug(">>>> Group attribute \"$expectedAttributeName\" does not match conditional")
             }
         }
         // ничего не нашли
-        return isNative
+        return isNegate
     }
 
-
-    override fun action(context: AuthenticationFlowContext?) {
-    }
-
-    override fun requiresUser(): Boolean {
-        return true
-    }
-
-    override fun setRequiredActions(
-        p0: KeycloakSession?,
-        p1: RealmModel?,
-        p2: UserModel?
-    ) {
-    }
-
-    override fun close() {
-    }
+    override fun action(context: AuthenticationFlowContext?) {}
+    override fun requiresUser(): Boolean = true
+    override fun setRequiredActions(p0: KeycloakSession?, p1: RealmModel?, p2: UserModel?) {}
+    override fun close() {}
 
 }

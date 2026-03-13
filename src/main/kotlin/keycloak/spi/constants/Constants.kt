@@ -7,26 +7,39 @@ class Constants {
 
     companion object {
 
-        const val NATIVE_ENABLED = "native_enabled"
-        const val BLOCKING_SWITCH: String = "blocking_switch"
-        const val BLOCKING_USERNAME_LIST: String = "blocking_username_list"
+        const val NEGATE_ENABLED_KEY = "native_enabled"
+        const val NEGATE_ENABLED_VALUE = false
+        const val BLOCKING_SWITCH_KEY = "blocking_switch"
+        const val BLOCKING_SWITCH_VALUE = true
+        const val BLOCKING_USERNAME_LIST_KEY = "blocking_username_list"
 
-        const val ENTER_TIME_SWITCH: String = "enter_time_switch"
-        const val ENTER_TIME_PERIOD: String = "30"
-        const val ENTER_TIME_ATTRIBUTE: String = "enterTime"
+        const val ENTER_TIME_SWITCH_KEY = "enter_time_switch"
+        const val ENTER_TIME_SWITCH_VALUE = true
+        const val ENTER_TIME_PERIOD_KEY = "enter_time_duration"
+        const val ENTER_TIME_PERIOD_VALUE = 30L
+        const val ENTER_TIME_ATTRIBUTE = "enterTime"
         const val DATE_TIME_PATTERN = "dd-MM-yyyy HH:mm:ssXXX"
         val ENTER_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern(DATE_TIME_PATTERN)
 
-        const val SMS_STUB_SWITCH = "sms_stub_switch"
-        const val SMS_STUB_CODE = "sms_stub_code"
-        const val SMS_CODE_LENGTH = "sms_stub_length"
-        const val SMS_CODE_TTL = "sms_ttl"
+        const val SMS_STUB_SWITCH_KEY = "sms_stub_switch"
+        const val SMS_STUB_SWITCH_VALUE = true
+        const val SMS_STUB_CODE_KEY = "sms_stub_code"
+        const val SMS_STUB_CODE_VALUE = "1111"
+        const val SMS_CODE_LENGTH_KEY = "sms_stub_length"
+        const val SMS_CODE_LENGTH_VALUE = 4
+        const val SMS_CODE_TTL_KEY = "sms_ttl"
+        const val SMS_CODE_TTL_VALUE = 60L
+        const val SMS_TTL_KEY = "ttl"
         const val SMS_CODE = "code"
-        const val SMS_TTL = "ttl"
+        const val TTL_ABSENT = -1000L
+        const val CODE_ABSENT = "absent"
+
 
         const val ATTRIBUTE_NAME = "attribute_name"
         const val ATTRIBUTE_VALUES = "attribute_value"
-        const val ATTRIBUTE_GROUPS = "attribute_groups_enabled"
+        const val ATTRIBUTE_GROUPS_KEY = "attribute_groups_enabled"
+        const val ATTRIBUTE_GROUPS_VALUE = false
+        const val ATTRIBUTE_ABSENT = "absent"
 
         const val BRUTE_FORCE_PASSWORD_FORM_ID = "password_brute_force_locker"
         const val BRUTE_FORCE_CACHE ="loginFailures"
@@ -63,6 +76,7 @@ class Constants {
         const val TELEGRAM_CHAT_ID_ATTRIBUTE = "telegram_chat_id"
         const val TELEGRAM_AUTH_NOTE_CODE = "telegram_code"
         const val TELEGRAM_AUTH_NOTE_TIME = "telegram_time_millis"
+        const val TELEGRAM_TOKEN_KEY = "tg_token"
 
 
     }

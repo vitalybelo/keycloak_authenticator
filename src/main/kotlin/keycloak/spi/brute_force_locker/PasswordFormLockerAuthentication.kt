@@ -70,10 +70,10 @@ class PasswordFormLockerAuthentication(
 
             if (attempt != null) {
                 if (attempt.blockType.isBlocked()) {
-                    attempt.displayBlockedMessage(lockerConfig)
+                    attempt.displayBlockoutMessage(lockerConfig)
                     return true
                 } else {
-                    attempt.displayLoginAttempts()
+                    attempt.display()
                 }
             } else {
                 logger.debug(">>>> User: ${context.user?.username} has not login failures")

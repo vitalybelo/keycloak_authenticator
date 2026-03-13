@@ -1,9 +1,6 @@
 package keycloak.spi.enter_time_logics
 
-import keycloak.spi.constants.Constants.Companion.ENTER_TIME_ATTRIBUTE
-import keycloak.spi.constants.Constants.Companion.ENTER_TIME_FORMATTER
-import keycloak.spi.constants.Constants.Companion.ENTER_TIME_PERIOD
-import keycloak.spi.constants.Constants.Companion.ENTER_TIME_SWITCH
+import keycloak.spi.constants.Constants
 import org.jboss.logging.Logger
 import org.keycloak.authentication.AuthenticationFlowContext
 import org.keycloak.authentication.Authenticator
@@ -12,65 +9,74 @@ import org.keycloak.models.RealmModel
 import org.keycloak.models.UserModel
 import java.time.Instant
 import java.time.ZonedDateTime
-import javax.management.timer.Timer
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 
-class EnterTimeAuthentication() : Authenticator {
+class EnterTimeAuthentication : Authenticator {
 
     companion object {
         private val logger = Logger.getLogger(EnterTimeAuthentication::class.java)
     }
 
+
     override fun authenticate(context: AuthenticationFlowContext?) {
 
         if (context != null) {
 
-            val user = context.user
+            val user = context.user ?: return
             val config = context.authenticatorConfig
-            val isEnterTimeLogic = config?.config[ENTER_TIME_SWITCH]?.toBoolean() ?: false
-            val deadLinePeriodInDays = config?.config[ENTER_TIME_PERIOD]?.toInt()
+            val isEnterTimeLogicOn = config?.config[Constants.ENTER_TIME_SWITCH_KEY]?.toBoolean() ?: Constants.ENTER_TIME_SWITCH_VALUE
+            val requireActionInDays = config?.config[Constants.ENTER_TIME_PERIOD_KEY]?.toLong() ?: Constants.ENTER_TIME_PERIOD_VALUE
 
-            logger.info(">>>> User = ${user.username}")
-            logger.info(">>>> Enter Time Switch = $isEnterTimeLogic")
-            logger.info(">>>> Enter Time Period = $deadLinePeriodInDays")
+            logger.debug(""">>>>
+                | Username: ${user.username}
+                | Enter time switch = $isEnterTimeLogicOn
+                | Enter time require action in days = $requireActionInDays
+            """.trimIndent())
 
-            if (isEnterTimeLogic && deadLinePeriodInDays != null) {
-
+            if (isEnterTimeLogicOn) {
                 // параметры аутентификатора заданы, будем проверять логику для смены пароля
-                user.getFirstAttribute(ENTER_TIME_ATTRIBUTE)?.let { enterTimeString ->
+                user.getFirstAttribute(Constants.ENTER_TIME_ATTRIBUTE)?.let { enterTimeString ->
 
-                    val previousEnterMillis =
-                        ZonedDateTime.parse(enterTimeString, ENTER_TIME_FORMATTER).toInstant().toEpochMilli()
-                    val instantEnterMillis = Instant.now().toEpochMilli()
-                    val passedPeriodInMillis = instantEnterMillis - previousEnterMillis
-                    val deadLinePeriodInMillis = deadLinePeriodInDays * Timer.ONE_DAY
-                    val duration = Duration.ofMillis(passedPeriodInMillis)
-                    val days = duration.toDays()
-                    val hours = duration.minusDays(days).toHours()
-                    val minutes = duration.minusDays(days)
-                        .minusHours(hours).toMinutes()
-                    val seconds = duration.minusDays(days)
-                        .minusHours(hours).minusMinutes(minutes).toSeconds()
+                    try {
+                        val lastEnterInMillis = ZonedDateTime
+                            .parse(enterTimeString, Constants.ENTER_TIME_FORMATTER).toInstant().toEpochMilli()
+                        val currentEnterInMillis = Instant.now().toEpochMilli()
+                        val idlePeriodInMillis = currentEnterInMillis - lastEnterInMillis
 
-                    logger.info(">>>> From last login " +
-                            "passed = $days days, $hours hours, $minutes minutes, $seconds seconds")
+                        val duration = Duration.ofMillis(idlePeriodInMillis)
+                        val days = duration.toDays()
+                        val hours = duration.toHoursPart()
+                        val minutes = duration.toMinutesPart()
+                        val seconds = duration.toSecondsPart()
 
-                    if (passedPeriodInMillis > deadLinePeriodInMillis) {
+                        logger.debug(""">>>>
+                            | >>>> From user = ${user.username} last login passed:
+                            | Days = $days
+                            | Hours = $hours
+                            | Minutes = $minutes
+                            | Seconds = $seconds
+                        """.trimIndent()
+                        )
 
-                        logger.warn(">>>> From last login passed more than = $deadLinePeriodInDays")
-                        user.addRequiredAction(UserModel.RequiredAction.UPDATE_PASSWORD)
+                        if (idlePeriodInMillis > TimeUnit.DAYS.toMillis(requireActionInDays)) {
+                            logger.warn(">>>> Add required action to change password for user ${user.username}")
+                            user.addRequiredAction(UserModel.RequiredAction.UPDATE_PASSWORD)
+                        }
+                    } catch (ex: Exception) {
+                        logger.error(">>>> Exception message : ${ex.message}, cause: ${ex.cause}")
                     }
                 }
             }
 
             // время последнего входа устанавливаем вне зависимости от переключателя логики, всегда
-            val enterIsoTime = ENTER_TIME_FORMATTER.format(ZonedDateTime.now())
+            val enterIsoTime = Constants.ENTER_TIME_FORMATTER.format(ZonedDateTime.now())
             user.setSingleAttribute(
-                ENTER_TIME_ATTRIBUTE,
+                Constants.ENTER_TIME_ATTRIBUTE,
                 enterIsoTime
             )
-            val enterTime: String? = user.getFirstAttribute(ENTER_TIME_ATTRIBUTE)
+            val enterTime: String? = user.getFirstAttribute(Constants.ENTER_TIME_ATTRIBUTE)
             logger.info(">>>> Updated enter time = $enterTime")
 
             context.success()
@@ -78,29 +84,10 @@ class EnterTimeAuthentication() : Authenticator {
     }
 
 
-    override fun action(context: AuthenticationFlowContext?) {
-    }
-
-    override fun requiresUser(): Boolean {
-        return true
-    }
-
-    override fun configuredFor(
-        session: KeycloakSession?,
-        realm: RealmModel?,
-        user: UserModel?
-    ): Boolean {
-        return true
-    }
-
-    override fun setRequiredActions(
-        session: KeycloakSession?,
-        realm: RealmModel?,
-        user: UserModel?
-    ) {
-    }
-
-    override fun close() {
-    }
+    override fun action(context: AuthenticationFlowContext?) {}
+    override fun requiresUser(): Boolean = true
+    override fun configuredFor(session: KeycloakSession?, realm: RealmModel?, user: UserModel?): Boolean = true
+    override fun setRequiredActions(session: KeycloakSession?, realm: RealmModel?, user: UserModel?) {}
+    override fun close() {}
 
 }

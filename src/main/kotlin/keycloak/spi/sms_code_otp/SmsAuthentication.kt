@@ -2,7 +2,6 @@ package keycloak.spi.sms_code_otp
 
 import org.jboss.logging.Logger
 import jakarta.ws.rs.core.Response
-import keycloak.spi.utils.AuthenticationUtils
 import keycloak.spi.constants.Constants
 import org.keycloak.authentication.AuthenticationFlowContext
 import org.keycloak.authentication.AuthenticationFlowError
@@ -11,16 +10,15 @@ import org.keycloak.common.util.SecretGenerator
 import org.keycloak.models.KeycloakSession
 import org.keycloak.models.RealmModel
 import org.keycloak.models.UserModel
-import javax.management.timer.Timer
 
 
-class SmsAuthentication() : Authenticator {
+class SmsAuthentication : Authenticator {
 
     companion object {
         private val logger = Logger.getLogger(SmsAuthentication::class.java)
-        private val authenticationUtils = AuthenticationUtils()
         private const val TPL_CODE = "login-sms.ftl"
         private const val ATTRIBUTE_PHONE = "phone"
+        private const val ONE_SECOND = 1000
     }
 
     /**
@@ -34,23 +32,22 @@ class SmsAuthentication() : Authenticator {
      */
     override fun authenticate(context: AuthenticationFlowContext?) {
 
-        authenticationUtils.contextEnabledOrNull(context) ?: return
+        if (context == null || context.user == null) return
+        logger.info(">>>> Start sms authenticator for user = ${context.user.username}")
 
-        logger.info(">>>> username = ${context!!.user.username}")
-        val smsAuthConfig = SmsAuthConfig(context)
-
+        val smsAuthConfig = SmsAuthConfig.init(context)
         try {
             challengeSmsForm(context, smsAuthConfig, null)
             // больше тут делать нечего, далее управление будет передано в метод action()
 
         } catch (ex: Exception) {
-            // предполагается, что выше нужно было выслать СМС, этот блок именно для этого
             context.failureChallenge(
                 AuthenticationFlowError.INTERNAL_ERROR,
                 context.form().setError("smsAuthSmsNotSent", ex.message)
                     .createErrorPage(Response.Status.INTERNAL_SERVER_ERROR))
         }
     }
+
 
     /**
      * Метод вызывается после того, как пользователь вводит - код подтверждения 2FA
@@ -60,16 +57,15 @@ class SmsAuthentication() : Authenticator {
      */
     override fun action(context: AuthenticationFlowContext?) {
 
-        authenticationUtils.contextEnabledOrNull(context) ?: return
-
-        val enteredCode: String? = context!!.httpRequest.decodedFormParameters.getFirst(Constants.SMS_CODE)
-        val smsAuth = receiveAuthNotesOrNull(context, enteredCode) ?: return
+        if (context == null) return
+        val enteredCode = context.httpRequest.decodedFormParameters.getFirst(Constants.SMS_CODE)
+        val smsAuthConfig = receiveAuthNotesOrNull(context, enteredCode) ?: return
 
         // если хотя бы один параметр не получен - выходим с ошибкой
-        if (enteredCode!! == smsAuth.code) {
-            if (smsAuth.ttl!! < System.currentTimeMillis()) {
+        if (enteredCode == smsAuthConfig.expectedCode) {
+            if (smsAuthConfig.ttl < System.currentTimeMillis()) {
                 // expired
-                challengeSmsForm(context, smsAuth, "smsAuthCodeExpired")
+                challengeSmsForm(context, smsAuthConfig, "smsAuthCodeExpired")
             } else {
                 // valid
                 context.success()
@@ -98,33 +94,28 @@ class SmsAuthentication() : Authenticator {
      * @return дата класс параметров аутентификатора
      */
     private fun receiveAuthNotesOrNull(
-
         context: AuthenticationFlowContext,
         enteredCode: String?
     ): SmsAuthConfig? {
 
-        val smsAuthConfig = SmsAuthConfig()
-        val authSession = context.authenticationSession
+        val auth = context.authenticationSession
+        val smsAuthConfig = SmsAuthConfig(
 
-        smsAuthConfig.code = authSession.getAuthNote(Constants.SMS_CODE)
-        smsAuthConfig.ttl = authSession.getAuthNote(Constants.SMS_TTL)?.toLong()
-        smsAuthConfig.smsCodeTTL = authSession.getAuthNote(Constants.SMS_CODE_TTL)?.toLong()
-        smsAuthConfig.codeLength = authSession.getAuthNote(Constants.SMS_CODE_LENGTH)?.toInt()
-        smsAuthConfig.isStubEnable = authSession.getAuthNote(Constants.SMS_STUB_SWITCH)?.toBoolean()
-        smsAuthConfig.stubCode = authSession.getAuthNote(Constants.SMS_STUB_CODE)
-
-        logger.info(">>>> Received ttl = ${smsAuthConfig.ttl}")
-        logger.info(">>>> Received ttl value = ${smsAuthConfig.smsCodeTTL}")
-        logger.info(">>>> Received secret code = ${smsAuthConfig.code}")
-        logger.info(">>>> Received entered code = $enteredCode")
-        logger.info(">>>> Received entered code length = ${smsAuthConfig.codeLength}")
-        logger.info(">>>> Received isStubEnable = ${smsAuthConfig.isStubEnable}")
-        logger.info(">>>> Received stub code = ${smsAuthConfig.stubCode}")
+            ttl = auth.getAuthNote(Constants.SMS_TTL_KEY)?.toLongOrNull() ?: Constants.TTL_ABSENT,
+            expectedCode = auth.getAuthNote(Constants.SMS_CODE) ?: Constants.CODE_ABSENT,
+            isStubEnable = auth.getAuthNote(Constants.SMS_STUB_SWITCH_KEY)?.toBooleanStrictOrNull() ?: Constants.SMS_STUB_SWITCH_VALUE,
+            smsCodeTTL = auth.getAuthNote(Constants.SMS_CODE_TTL_KEY)?.toLongOrNull() ?: Constants.SMS_CODE_TTL_VALUE,
+            codeLength = auth.getAuthNote(Constants.SMS_CODE_LENGTH_KEY)?.toIntOrNull() ?: Constants.SMS_CODE_LENGTH_VALUE,
+            stubCode = auth.getAuthNote(Constants.SMS_STUB_CODE_KEY) ?: Constants.SMS_STUB_CODE_VALUE
+        )
+        smsAuthConfig.display()
 
         if (smsAuthConfig.isNullOrEmpty() || enteredCode == null) {
-            logger.info("Invalid parameters :: ")
-            context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
-                context.form().createErrorPage(Response.Status.INTERNAL_SERVER_ERROR))
+            logger.warn("Invalid parameters :: enteredCode = $enteredCode, ttl = ${smsAuthConfig.ttl}, code = ${smsAuthConfig.expectedCode}")
+            context.failureChallenge(
+                AuthenticationFlowError.INTERNAL_ERROR,
+                context.form().createErrorPage(Response.Status.INTERNAL_SERVER_ERROR)
+            )
             return null
         }
         return smsAuthConfig
@@ -147,41 +138,40 @@ class SmsAuthentication() : Authenticator {
         error: String?
     ) {
         // формируем секретный код для отправки СМС
-        val secretCode = if (smsAuthConfig.isStubEnable == true) {
+        val secretCode = if (smsAuthConfig.isStubEnable) {
             // используется режим симуляции, значение кода = заданному в конфигурации значению stub value
             smsAuthConfig.stubCode
         } else {
             // генерируем безопасный секретный код, он должен быть отправлен пользователю по СМС далее
-            SecretGenerator.getInstance().randomString(smsAuthConfig.codeLength!!, SecretGenerator.DIGITS)
+            SecretGenerator.getInstance().randomString(smsAuthConfig.codeLength, SecretGenerator.DIGITS)
         }
         // чтобы мы могли посмотреть в логах код - отобразим его для режима разработки
         logger.info(">>>> Created SMS secret code = $secretCode")
 
         // вычисляем значение TTL для проверки тайм-аута
-        val ttl = (System.currentTimeMillis() + (smsAuthConfig.smsCodeTTL!! * Timer.ONE_SECOND))
+        val ttl = (System.currentTimeMillis() + (smsAuthConfig.smsCodeTTL * ONE_SECOND))
         // вносим данные в карту параметров AuthNote для передачи в UI форму
         val authSession = context.authenticationSession
         authSession.setAuthNote(Constants.SMS_CODE, secretCode)
-        authSession.setAuthNote(Constants.SMS_TTL, ttl.toString())
-        authSession.setAuthNote(Constants.SMS_STUB_SWITCH, smsAuthConfig.isStubEnable.toString())
-        authSession.setAuthNote(Constants.SMS_CODE_LENGTH, smsAuthConfig.codeLength.toString())
-        authSession.setAuthNote(Constants.SMS_CODE_TTL, smsAuthConfig.smsCodeTTL.toString())
-        authSession.setAuthNote(Constants.SMS_STUB_CODE, smsAuthConfig.stubCode)
+        authSession.setAuthNote(Constants.SMS_TTL_KEY, ttl.toString())
+        authSession.setAuthNote(Constants.SMS_STUB_SWITCH_KEY, smsAuthConfig.isStubEnable.toString())
+        authSession.setAuthNote(Constants.SMS_CODE_LENGTH_KEY, smsAuthConfig.codeLength.toString())
+        authSession.setAuthNote(Constants.SMS_CODE_TTL_KEY, smsAuthConfig.smsCodeTTL.toString())
+        authSession.setAuthNote(Constants.SMS_STUB_CODE_KEY, smsAuthConfig.stubCode)
         /*
         TODO - здесь должен быть вызов метода отправки SMS
         */
         // и вызываем UI форму ввода кода СМС
         val initProvider = context.form().setAttribute("realm", context.realm)
-        val finalProvider =
-            if (error.isNullOrEmpty()) initProvider else initProvider.setError(error)
+        val finalProvider = if (error.isNullOrEmpty()) {
+            initProvider
+        } else {
+            initProvider.setError(error)
+        }
         val response = finalProvider.createForm(TPL_CODE)
         context.challenge(response)
     }
 
-
-    override fun requiresUser(): Boolean {
-        return true
-    }
 
     /**
      * Данный шаг актуален только если у пользователя задано номер телефона
@@ -194,18 +184,10 @@ class SmsAuthentication() : Authenticator {
         session: KeycloakSession?,
         realm: RealmModel?,
         user: UserModel?
-    ): Boolean {
-        return !user?.getFirstAttribute(ATTRIBUTE_PHONE).isNullOrEmpty()
-    }
+    ): Boolean = !user?.getFirstAttribute(ATTRIBUTE_PHONE).isNullOrEmpty()
 
-    override fun setRequiredActions(
-        session: KeycloakSession?,
-        realm: RealmModel?,
-        user: UserModel?
-    ) {
-    }
-
-    override fun close() {
-    }
+    override fun requiresUser(): Boolean = true
+    override fun setRequiredActions(session: KeycloakSession?, realm: RealmModel?, user: UserModel?) {}
+    override fun close() {}
 
 }

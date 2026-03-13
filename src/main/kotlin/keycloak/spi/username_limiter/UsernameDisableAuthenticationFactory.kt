@@ -1,6 +1,7 @@
 package keycloak.spi.username_limiter
 
 import com.google.auto.service.AutoService
+import keycloak.spi.constants.Constants
 import org.jboss.logging.Logger
 import org.keycloak.Config
 import org.keycloak.authentication.Authenticator
@@ -11,8 +12,6 @@ import org.keycloak.models.KeycloakSession
 import org.keycloak.models.KeycloakSessionFactory
 import org.keycloak.provider.ProviderConfigProperty
 import org.keycloak.provider.ProviderConfigurationBuilder
-import keycloak.spi.constants.Constants.Companion.BLOCKING_SWITCH
-import keycloak.spi.constants.Constants.Companion.BLOCKING_USERNAME_LIST
 
 /**
  * Фабрика аутентификатора
@@ -24,48 +23,20 @@ class UsernameDisableAuthenticationFactory : AuthenticatorFactory {
     companion object {
         private const val PROVIDER_ID = "username_blocking_execution"
         private val logger = Logger.getLogger(UsernameDisableAuthenticationFactory::class.java)
-        private val SINGLETON = UsernameDisableAuthentication()
     }
 
-    override fun create(p0: KeycloakSession?): Authenticator {
-        return SINGLETON
-    }
+    override fun create(p0: KeycloakSession?): Authenticator = UsernameDisableAuthentication()
 
-    override fun init(p0: Config.Scope?) {
-        logger.info(">>>> INIT >>>>")
-    }
+    override fun init(p0: Config.Scope?) { logger.info(">>>> INIT >>>>") }
+    override fun postInit(p0: KeycloakSessionFactory?) { logger.info(">>>> POST INIT >>>>") }
+    override fun close() { logger.info(">>>> CLOSE >>>>") }
+    override fun getId(): String = PROVIDER_ID
 
-    override fun postInit(p0: KeycloakSessionFactory?) {
-        logger.info(">>>> POST INIT >>>>")
-    }
-
-    override fun close() {
-        logger.info(">>>> CLOSE >>>>")
-    }
-
-    override fun getId(): String {
-        return PROVIDER_ID
-    }
-
-    override fun getDisplayType(): String {
-        return "Username Login Limiter"
-    }
-
-    override fun getHelpText(): String {
-        return "Username Login Blocker Authenticator"
-    }
-
-    override fun isConfigurable(): Boolean {
-        return true
-    }
-
-    override fun isUserSetupAllowed(): Boolean {
-        return true
-    }
-
-    override fun getReferenceCategory(): String {
-        return "blocker"
-    }
+    override fun getDisplayType(): String = "Username Login Blocker"
+    override fun getHelpText(): String = "Username Login Blocker Authenticator"
+    override fun isConfigurable(): Boolean = true
+    override fun isUserSetupAllowed(): Boolean = false
+    override fun getReferenceCategory(): String = "blocker"
 
     override fun getRequirementChoices(): Array<out AuthenticationExecutionModel.Requirement?>? {
         return ConfigurableAuthenticatorFactory.REQUIREMENT_CHOICES
@@ -74,15 +45,15 @@ class UsernameDisableAuthenticationFactory : AuthenticatorFactory {
     override fun getConfigProperties(): List<ProviderConfigProperty?>? {
         return ProviderConfigurationBuilder.create()
             .property()
-            .name(BLOCKING_SWITCH)
+            .name(Constants.BLOCKING_SWITCH_KEY)
             .label("Blocking switch")
             .type(ProviderConfigProperty.BOOLEAN_TYPE)
             .helpText("Если \"ON\" - будет выполняться проверка по username")
-            .defaultValue(true)
+            .defaultValue(Constants.BLOCKING_SWITCH_VALUE)
             .add()
 
             .property()
-            .name(BLOCKING_USERNAME_LIST)
+            .name(Constants.BLOCKING_USERNAME_LIST_KEY)
             .label("Blocking username list")
             .type(ProviderConfigProperty.MULTIVALUED_STRING_TYPE)
             .helpText("Usernames, that should be blocked")

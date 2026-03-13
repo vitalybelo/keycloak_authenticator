@@ -1,5 +1,6 @@
 package keycloak.spi.username_limiter
 
+import jakarta.ws.rs.core.Response
 import keycloak.spi.constants.Constants
 import org.jboss.logging.Logger
 import org.keycloak.authentication.AuthenticationFlowContext
@@ -18,72 +19,56 @@ class UsernameDisableAuthentication : Authenticator {
 
     override fun authenticate(context: AuthenticationFlowContext?) {
 
-        if (context != null) {
+        if (context == null || context.user == null) return
 
-            val config = context.authenticatorConfig
-            val user = context.user
+        val username = context.user.username ?: Constants.ANONYMOUS
+        val config = context.authenticatorConfig
+        val isCheckEnable = config?.config[Constants.BLOCKING_SWITCH_KEY]?.toBooleanStrictOrNull() ?: Constants.BLOCKING_SWITCH_VALUE
+        val restrictedUsernames = config?.config[Constants.BLOCKING_USERNAME_LIST_KEY]?.split("##")?.toSet() ?: emptySet()
 
-            val disabledUsernameList =
-                config?.config[Constants.BLOCKING_USERNAME_LIST]?.split("##")?.toSet() ?: emptySet()
+        logger.debug(""">>>> 
+            | Configuration UsernameDisableAuthentication: 
+            | switch ON = $isCheckEnable
+            | auth username = $username
+            | restricted usernames $restrictedUsernames
+        """.trimIndent())
 
-            val username = user?.username ?: ""
-            val isCheckEnable = config?.config[Constants.BLOCKING_SWITCH]?.toBoolean() ?: false
+        if (isCheckEnable && restrictedUsernames.isNotEmpty()) {
 
-            logger.info(">>>> toggle = $isCheckEnable")
-            logger.info(">>>> username = $username")
-            logger.info(">>>> username disabled = $disabledUsernameList")
+            val normalizedDisabledUsernames = restrictedUsernames.map { it.lowercase() }
+            val usernameLowerCase = username.lowercase()
+            if (normalizedDisabledUsernames.contains(usernameLowerCase)) {
 
-            if (isCheckEnable
-                && disabledUsernameList.isNotEmpty()
-                && username.isNotEmpty()) {
+                val execution = context.execution
+                if (execution.isRequired) {
 
-                val normalizedDisabledUsernames = disabledUsernameList.map { it.lowercase() }
-                val usernameLowerCase = username.lowercase()
-                if (normalizedDisabledUsernames.contains(usernameLowerCase)) {
-
-                    val execution = context.execution
-                    if (execution.isRequired) {
-
-                        logger.info(">>>> User login = $username is blocked")
-                        context.failureChallenge(
-                            AuthenticationFlowError.INVALID_USER,
-                            context.form().setError("User login \"$username\" blocked by administrator")
-                                .createWebAuthnErrorPage()
-                        )
-                    } else if (execution.isConditional || execution.isAlternative) {
-                        context.attempted()
-                    }
-                    return
+                    logger.info(">>>> User login = $username is blocked")
+                    context.failureChallenge(
+                        AuthenticationFlowError.INVALID_USER,
+                        context.form().setError("User login \"$username\" blocked by administrator")
+                            .createErrorPage(Response.Status.FORBIDDEN)
+                    )
+                } else if (execution.isConditional || execution.isAlternative) {
+                    context.attempted()
                 }
+                return
             }
-            logger.info(">>>> User login = $username is enabled")
-            context.success()
         }
+        logger.info(">>>> User login = $username is enabled")
+        context.success()
     }
 
-    override fun action(context: AuthenticationFlowContext?) {
-    }
 
-    override fun requiresUser(): Boolean {
-        return true
-    }
+    override fun action(context: AuthenticationFlowContext?) {}
 
     override fun configuredFor(
         session: KeycloakSession?,
         realm: RealmModel?,
         user: UserModel?
-    ): Boolean {
-        return !user?.username.isNullOrEmpty()
-    }
+    ): Boolean = !user?.username.isNullOrEmpty()
 
-    override fun setRequiredActions(
-        session: KeycloakSession?,
-        realm: RealmModel?,
-        user: UserModel?
-    ) {
-    }
-
-    override fun close() {
-    }
+    override fun requiresUser(): Boolean = true
+    override fun setRequiredActions(session: KeycloakSession?, realm: RealmModel?, user: UserModel?) { }
+    override fun close() {}
 
 }
