@@ -1266,7 +1266,7 @@
         "jsonType.label" : "String"
       }
     } ],
-    "defaultClientScopes" : [ "abscustId", "profile", "roles", "web-origins", "acr", "phone", "position", "department", "basic", "session_state", "required_2FA", "enterTime", "group_attribute", "email" ],
+    "defaultClientScopes" : [ "abscustId", "roles", "profile", "web-origins", "acr", "phone", "position", "department", "basic", "session_state", "required_2FA", "enterTime", "group_attribute", "email" ],
     "optionalClientScopes" : [ "address", "offline_access", "microprofile-jwt" ]
   }, {
     "id" : "d3e1ba5e-f9f3-43ef-9de1-5c2e814fdb62",
@@ -2432,6 +2432,42 @@
       "userSetupAllowed" : false
     } ]
   }, {
+    "id" : "a6fdacc7-451d-46cf-bfdc-db8a81dbad6d",
+    "alias" : "Browser - Telegram 2FA - Trusted Device",
+    "description" : "browser based authentication",
+    "providerId" : "basic-flow",
+    "topLevel" : true,
+    "builtIn" : false,
+    "authenticationExecutions" : [ {
+      "authenticator" : "auth-cookie",
+      "authenticatorFlow" : false,
+      "requirement" : "ALTERNATIVE",
+      "priority" : 10,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    }, {
+      "authenticator" : "auth-spnego",
+      "authenticatorFlow" : false,
+      "requirement" : "ALTERNATIVE",
+      "priority" : 20,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    }, {
+      "authenticator" : "identity-provider-redirector",
+      "authenticatorFlow" : false,
+      "requirement" : "ALTERNATIVE",
+      "priority" : 25,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    }, {
+      "authenticatorFlow" : true,
+      "requirement" : "ALTERNATIVE",
+      "priority" : 30,
+      "autheticatorFlow" : true,
+      "flowAlias" : "Browser Advanced Flow",
+      "userSetupAllowed" : false
+    } ]
+  }, {
     "id" : "6c7e09c3-61a0-447f-a978-596ff434e70d",
     "alias" : "Browser 2FA Application",
     "description" : "",
@@ -2499,6 +2535,36 @@
       "authenticatorFlow" : false,
       "requirement" : "REQUIRED",
       "priority" : 1,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    } ]
+  }, {
+    "id" : "cb6db77d-f27f-4e37-8840-d2291dcdb28e",
+    "alias" : "Browser Advanced Flow",
+    "description" : "Username, password, otp and other auth forms.",
+    "providerId" : "basic-flow",
+    "topLevel" : false,
+    "builtIn" : false,
+    "authenticationExecutions" : [ {
+      "authenticator" : "auth-username-password-form",
+      "authenticatorFlow" : false,
+      "requirement" : "REQUIRED",
+      "priority" : 10,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    }, {
+      "authenticatorFlow" : true,
+      "requirement" : "REQUIRED",
+      "priority" : 11,
+      "autheticatorFlow" : true,
+      "flowAlias" : "Trusted Device - Telegram 2FA",
+      "userSetupAllowed" : false
+    }, {
+      "authenticatorConfig" : "Remember Device Form config uno",
+      "authenticator" : "remember-device-authenticator",
+      "authenticatorFlow" : false,
+      "requirement" : "REQUIRED",
+      "priority" : 12,
       "autheticatorFlow" : false,
       "userSetupAllowed" : false
     } ]
@@ -2910,6 +2976,30 @@
       "authenticatorFlow" : false,
       "requirement" : "REQUIRED",
       "priority" : 20,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    } ]
+  }, {
+    "id" : "7480f156-6ab5-4dfb-affb-dbeda4f95b75",
+    "alias" : "Trusted Device - Telegram 2FA",
+    "description" : "",
+    "providerId" : "basic-flow",
+    "topLevel" : false,
+    "builtIn" : false,
+    "authenticationExecutions" : [ {
+      "authenticatorConfig" : "Trusted Device Checker config",
+      "authenticator" : "trusted-device-authenticator",
+      "authenticatorFlow" : false,
+      "requirement" : "ALTERNATIVE",
+      "priority" : 0,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    }, {
+      "authenticatorConfig" : "Telegram 2FA config uno",
+      "authenticator" : "telegram-authenticator",
+      "authenticatorFlow" : false,
+      "requirement" : "ALTERNATIVE",
+      "priority" : 1,
       "autheticatorFlow" : false,
       "userSetupAllowed" : false
     } ]
@@ -3350,7 +3440,7 @@
     "alias" : "Condition - check user attribute config",
     "config" : {
       "attribute_name" : "required_2FA",
-      "attribute_value" : "SMS",
+      "attribute_value" : "SMS##СМС",
       "native_enabled" : "false",
       "attribute_groups_enabled" : "true"
     }
@@ -3359,7 +3449,7 @@
     "alias" : "Condition - check user attribute config Application",
     "config" : {
       "attribute_name" : "required_2FA",
-      "attribute_value" : "APP",
+      "attribute_value" : "APP##APK",
       "native_enabled" : "false",
       "attribute_groups_enabled" : "true"
     }
@@ -3368,7 +3458,7 @@
     "alias" : "Condition - check user attribute config Telegram",
     "config" : {
       "attribute_name" : "required_2FA",
-      "attribute_value" : "TEL",
+      "attribute_value" : "TEL##TG##ТЕЛЕГА",
       "native_enabled" : "false",
       "attribute_groups_enabled" : "true"
     }
@@ -3417,6 +3507,14 @@
     "alias" : "Password Form and 2FA conditional Forms config",
     "config" : { }
   }, {
+    "id" : "bb8ae1d0-b96f-425d-8d4a-45b4450f3248",
+    "alias" : "Remember Device Form config uno",
+    "config" : {
+      "remember_recovery_swith" : "true",
+      "remember_switch" : "true",
+      "remember_cookie_ttl" : "30"
+    }
+  }, {
     "id" : "4ad69b7c-03ff-4d26-9ab2-88710d9d195e",
     "alias" : "Telegram 2FA config",
     "config" : {
@@ -3431,6 +3529,21 @@
       "telegram_switch" : "true",
       "telegram_switch_pass" : "true",
       "telegram_code_length" : "6"
+    }
+  }, {
+    "id" : "c3bceb0f-1796-4112-a042-3fd00f6452e2",
+    "alias" : "Telegram 2FA config uno",
+    "config" : {
+      "telegram_code_ttl" : "60",
+      "telegram_switch" : "true",
+      "telegram_code_length" : "6"
+    }
+  }, {
+    "id" : "0505e09d-a63d-4211-a56a-faa5a0ff3670",
+    "alias" : "Trusted Device Checker config",
+    "config" : {
+      "trusted_device_switch" : "true",
+      "trusted_device_delete" : "true"
     }
   }, {
     "id" : "fbe05c56-7e2b-49a7-aaad-bd237efac402",
@@ -3559,7 +3672,7 @@
     "priority" : 1001,
     "config" : { }
   } ],
-  "browserFlow" : "Browser Username Password",
+  "browserFlow" : "Browser - Telegram 2FA - Trusted Device",
   "registrationFlow" : "registration",
   "directGrantFlow" : "direct grant",
   "resetCredentialsFlow" : "reset credentials",
