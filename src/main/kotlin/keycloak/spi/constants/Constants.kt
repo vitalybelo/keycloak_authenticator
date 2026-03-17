@@ -78,6 +78,20 @@ class Constants {
         const val TELEGRAM_AUTH_NOTE_TIME = "telegram_time_millis"
         const val TELEGRAM_TOKEN_KEY = "tg_token"
 
+        const val TRUSTED_DEVICE_COOKIE_NAME = "KC_TRUSTED_DEVICE"
+        const val TRUSTED_DEVICE_FINGERPRINT = "fingerprint"
+
+        const val TRUSTED_DEVICE_REM_SWITCH_KEY = "remember_switch"
+        const val TRUSTED_DEVICE_REM_SWITCH_VALUE = true
+        const val TRUSTED_DEVICE_REM_TTL_KEY = "remember_cookie_ttl"
+        const val TRUSTED_DEVICE_REM_TTL_VALUE = 30L
+        const val TRUSTED_DEVICE_RECOVERY_KEY = "remember_recovery_swith"
+        const val TRUSTED_DEVICE_RECOVERY_VALUE = true
+        const val TRUSTED_DEVICE_AUTH_SWITCH_KEY = "trusted_device_switch"
+        const val TRUSTED_DEVICE_AUTH_SWITCH_VALUE = true
+        const val TRUSTED_DEVICE_DELETE_SWITCH_KEY = "trusted_device_delete"
+        const val TRUSTED_DEVICE_DELETE_SWITCH_VALUE = false
+
 
     }
 }

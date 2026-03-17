@@ -45,7 +45,7 @@ class TelegramAuthenticatorFactory : AuthenticatorFactory {
             .label("Telegram 2FA switch")
             .type(ProviderConfigProperty.BOOLEAN_TYPE)
             .helpText("Если \"ON\" - будет выполняться проверка входа по коду через telegram")
-            .defaultValue(Constants.TELEGRAM_SWITCH_VALUE.toString())
+            .defaultValue(Constants.TELEGRAM_SWITCH_VALUE)
             .add()
 
             .property()

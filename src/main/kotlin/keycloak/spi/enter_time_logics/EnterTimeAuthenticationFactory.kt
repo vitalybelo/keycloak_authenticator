@@ -47,7 +47,7 @@ class EnterTimeAuthenticationFactory : AuthenticatorFactory {
         return ProviderConfigurationBuilder.create()
             .property()
             .name(Constants.ENTER_TIME_SWITCH_KEY)
-            .label("Enter time switch")
+            .label("Enter time enabled")
             .type(ProviderConfigProperty.BOOLEAN_TYPE)
             .helpText("Если \"ON\" - будет выполняться проверка периода для смены пароля")
             .defaultValue(Constants.ENTER_TIME_SWITCH_VALUE)

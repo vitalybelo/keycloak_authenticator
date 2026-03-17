@@ -7,7 +7,6 @@ import org.keycloak.models.KeycloakSession
 import org.infinispan.Cache
 
 
-
 /**
  * Возвращает ключ поиска записи о блокировке в infinispan
  */
@@ -20,5 +19,7 @@ fun getInfinispanLoginAttemptCache(session: KeycloakSession): Cache<String, Logi
         .getCache<String, LoginAttempt>(BRUTE_FORCE_CACHE)
     return cache
 }
+
+
 
 
