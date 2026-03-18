@@ -13,10 +13,17 @@ import org.infinispan.Cache
 fun getCacheKey(realmId: String, userId: String) = "bf:${realmId}:${userId}"
 
 fun getInfinispanLoginAttemptCache(session: KeycloakSession): Cache<String, LoginAttempt> {
-
     val cache = session
         .getProvider(InfinispanConnectionProvider::class.java)
         .getCache<String, LoginAttempt>(BRUTE_FORCE_CACHE)
+    return cache
+
+}
+
+fun getInfinispanWorkCache(session: KeycloakSession): Cache<String, String>? {
+    val cache = session
+        .getProvider(InfinispanConnectionProvider::class.java)
+        .getCache<String, String>(InfinispanConnectionProvider.WORK_CACHE_NAME)
     return cache
 }
 

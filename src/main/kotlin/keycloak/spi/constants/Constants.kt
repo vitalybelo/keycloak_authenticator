@@ -71,7 +71,7 @@ class Constants {
         const val TELEGRAM_CODE_TTL_KEY = "telegram_code_ttl"
         const val TELEGRAM_CODE_TTL_VALUE = 60
         const val TELEGRAM_BOT_TOKEN = "8719040842:AAFiZKnA0ts82CARQNs2_lWM_DpKt5da0m0"
-        const val TELEGRAM_WEBHOOK_SECRET = "Keycloak_TG_Auth_Secret_999_Vitos"
+        const val TELEGRAM_WEBHOOK_TOKEN = "Keycloak_TG_Auth_Secret_999_Vitos"
         const val TELEGRAM_BIND_ACTION_ID = "telegram-bind-action"
         const val TELEGRAM_CHAT_ID_ATTRIBUTE = "telegram_chat_id"
         const val TELEGRAM_AUTH_NOTE_CODE = "telegram_code"

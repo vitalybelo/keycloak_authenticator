@@ -51,7 +51,7 @@ class RememberDeviceAuthenticator(
     override fun authenticate(context: AuthenticationFlowContext) {
 
         val rememberConfig = RememberDeviceConfig.init(context)
-        if (rememberConfig.isSwitchOn.not()) {
+        if (!rememberConfig.isSwitchOn) {
             logger.debug(">>>> Remembering device authenticate() disabled by configuration")
             context.success()
             return

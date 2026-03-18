@@ -39,19 +39,20 @@ class TelegramAuthenticator : Authenticator {
         val config = TelegramAuthenticationConfig.init(context)
 
         if (!config.isSwitchedOn) { // выходим успешно, если вход 2FA через telegram отключен
+            logger.debug(">>>> Telegram Authenticator is disabled")
             context.success()
             return
         }
 
         val chatId = context.user.getFirstAttribute(Constants.TELEGRAM_CHAT_ID_ATTRIBUTE)
+        logger.debug(">>>> Telegram Authentication started with chatId = $chatId")
 
-        // опишу магию, которая находится внизу класса, а именно configuredFor() и setRequiredActions()
-        // итак, метод configuredFor() проверяет, есть ли у пользователя нужный атрибут для входа через telegram
-        // если атрибут есть, все нормально, мы попадаем в метод authenticate() и выполняем проверку входа,
-        // но если атрибута нет, сработает магия keycloak, он автоматически вызовет метод setRequiredActions(),
-        // который установит обязательное выполнение требуемой акции TelegramBindRequiredActionFactory, по
-        // привязке пользователя к telegram, но после этого authenticate() уже не будет вызван
-        // единственное условие - наш аутентификатор должен иметь режим REQUIRED
+        if (chatId.isNullOrBlank()) {
+            logger.debug(">>>> Telegram Authentication finished and activate telegram bind action")
+            context.user.addRequiredAction(Constants.TELEGRAM_BIND_ACTION_ID)
+            context.success()
+            return
+        }
 
         var otpCode = context.authenticationSession.getAuthNote(Constants.TELEGRAM_AUTH_NOTE_CODE)
         if (otpCode.isNullOrEmpty()) {
@@ -183,16 +184,33 @@ class TelegramAuthenticator : Authenticator {
         }
     }
 
+    /**
+     * Описание магии, которая может пригодиться при использовании configuredFor() и setRequiredActions().
+     * Итак, метод configuredFor() проверяет, есть ли у пользователя нужный атрибут для входа через telegram.
+     * Если атрибут есть, все нормально, мы попадаем в метод authenticate() и выполняем проверку 2FA входа.
+     * Но если атрибута нет, сработает магия keycloak, он автоматически вызовет метод setRequiredActions().
+     * Который установит обязательное выполнение требуемой акции TelegramBindRequiredActionFactory, по
+     * привязке пользователя к telegram, но после этого authenticate() уже не будет вызван
+     * единственное условие - наш аутентификатор должен иметь режим REQUIRED
+     * тогда метод configuredFor() выглядел бы так
+     *
+     * ```override fun configuredFor(session: KeycloakSession, realm: RealmModel, user: UserModel): Boolean {
+     *          val chatId: String? = user.getFirstAttribute(Constants.TELEGRAM_CHAT_ID_ATTRIBUTE)
+     *          logger.debug(">>>> Authenticator configured for ${user.username} :: chatId = $chatId")
+     *          return !chatId.isNullOrBlank()
+     *    }
+     * ```
+     * Но если аутентификатор стоит в режиме ALTERNATIVE - authenticate() не будет вызван вообще никогда.
+     * Значит мы не сможем здесь использовать магию, поэтому просто вернем true и разберемся дальше.
+     */
+    override fun configuredFor(session: KeycloakSession, realm: RealmModel, user: UserModel): Boolean = true
 
-    // Keycloak будет сам проверять, настроен ли фактор у пользователя
-    override fun configuredFor(session: KeycloakSession, realm: RealmModel, user: UserModel): Boolean {
-        return !user.getFirstAttribute(Constants.TELEGRAM_CHAT_ID_ATTRIBUTE).isNullOrEmpty()
-    }
-
-
-    // если configuredFor вернул false, а аутентификатор обязателен - сработает условие из-под капота,
-    // а именно, keycloak сам вызовет этот метод, чтобы повесить нужный нам экшен - магия механизма Keycloak
+    /**
+     * Если configuredFor вернул бы false, а аутентификатор обязателен - сработает условие из-под капота.
+     * Именно, keycloak сам вызовет этот метод, чтобы повесить нужный нам экшен - магия механизма Keycloak
+     */
     override fun setRequiredActions(session: KeycloakSession, realm: RealmModel, user: UserModel) {
+        logger.debug(">>>> Set required actions to bind telegram user")
         user.addRequiredAction(Constants.TELEGRAM_BIND_ACTION_ID)
     }
 

@@ -42,7 +42,7 @@ class TelegramAuthenticatorFactory : AuthenticatorFactory {
         return ProviderConfigurationBuilder.create()
             .property()
             .name(Constants.TELEGRAM_SWITCH_KEY)
-            .label("Telegram 2FA switch")
+            .label("Telegram 2FA enabled")
             .type(ProviderConfigProperty.BOOLEAN_TYPE)
             .helpText("Если \"ON\" - будет выполняться проверка входа по коду через telegram")
             .defaultValue(Constants.TELEGRAM_SWITCH_VALUE)
@@ -50,7 +50,7 @@ class TelegramAuthenticatorFactory : AuthenticatorFactory {
 
             .property()
             .name(Constants.TELEGRAM_CODE_TTL_KEY)
-            .label("Code TTL (seconds)")
+            .label("Code TTL (in seconds)")
             .type(ProviderConfigProperty.INTEGER_TYPE)
             .helpText("Время жизни одноразового кода в секундах")
             .defaultValue(Constants.TELEGRAM_CODE_TTL_VALUE)
@@ -58,7 +58,7 @@ class TelegramAuthenticatorFactory : AuthenticatorFactory {
 
             .property()
             .name(Constants.TELEGRAM_CODE_LENGTH_KEY)
-            .label("Code length")
+            .label("Code length (count digits)")
             .type(ProviderConfigProperty.INTEGER_TYPE)
             .helpText("Количество цифр в временном коде")
             .defaultValue(Constants.TELEGRAM_CODE_LENGTH_VALUE)

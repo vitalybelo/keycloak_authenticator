@@ -13,6 +13,7 @@ import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import keycloak.spi.constants.Constants
 import keycloak.spi.telegram.model.TgUpdate
+import keycloak.spi.utils.getInfinispanWorkCache
 import org.jboss.logging.Logger
 import org.keycloak.connections.infinispan.InfinispanConnectionProvider
 import org.keycloak.models.KeycloakSession
@@ -65,7 +66,7 @@ class TelegramResourceProvider(private val session: KeycloakSession) : RealmReso
         @HeaderParam("X-Telegram-Bot-Api-Secret-Token") secretToken: String?
     ): Response {
 
-        if (secretToken != Constants.TELEGRAM_WEBHOOK_SECRET) {
+        if (secretToken != Constants.TELEGRAM_WEBHOOK_TOKEN) {
             logger.warn(">>>> Unauthorized webhook access attempt! Invalid or missing secret token.")
             return Response.status(Response.Status.UNAUTHORIZED).build()
         }
@@ -76,13 +77,11 @@ class TelegramResourceProvider(private val session: KeycloakSession) : RealmReso
             val chatId = update.message?.chat?.id
 
             if (chatId != null && !text.isNullOrBlank() && text.startsWith("/start ")) {
+
                 val token = text.removePrefix("/start ").trim()
                 logger.debug(">>>> Webhook received Telegram chat id: $chatId for token = $token")
 
-                val cache = session
-                    .getProvider(InfinispanConnectionProvider::class.java)
-                    .getCache<String, String>(InfinispanConnectionProvider.WORK_CACHE_NAME)
-
+                val cache = getInfinispanWorkCache(session)
                 cache?.put(token, chatId.toString(), CACHE_CHAT_ID_TTL, TimeUnit.MINUTES)
             }
         } catch (ex: Exception) {
@@ -91,7 +90,7 @@ class TelegramResourceProvider(private val session: KeycloakSession) : RealmReso
         }
 
         // Возвращаем явный JSON и тип, чтобы фильтры Keycloak не падали
-        return Response.ok("{\"status\":\"ok\"}", MediaType.APPLICATION_JSON).build()
+        return Response.ok(mapOf("status" to "ok"), MediaType.APPLICATION_JSON).build()
     }
     
     override fun close() {}

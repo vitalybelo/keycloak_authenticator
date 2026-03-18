@@ -1,6 +1,7 @@
 package keycloak.spi.telegram.action
 
 import keycloak.spi.constants.Constants
+import keycloak.spi.utils.getInfinispanWorkCache
 import org.jboss.logging.Logger
 import org.keycloak.authentication.RequiredActionContext
 import org.keycloak.authentication.RequiredActionProvider
@@ -72,9 +73,7 @@ class TelegramBindRequiredActionProvider(
         val formData = context.httpRequest.decodedFormParameters
         val token = context.authenticationSession.getAuthNote(Constants.TELEGRAM_TOKEN_KEY)
 
-        val cache = session
-            .getProvider(InfinispanConnectionProvider::class.java)
-            .getCache<String, String>(InfinispanConnectionProvider.WORK_CACHE_NAME)
+        val cache = getInfinispanWorkCache(session)
 
         // обработка финального сабмита от формы
         if (formData.containsKey("final_submit")) {

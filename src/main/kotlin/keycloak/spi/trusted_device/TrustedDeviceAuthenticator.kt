@@ -65,6 +65,18 @@ class TrustedDeviceAuthenticator(private val session: KeycloakSession) : Authent
         }
     }
 
+    /**
+     * В Keycloak метод action() никогда не должен оставаться без ответа (bug)
+     * Если по какой-то причине (например, кнопка "Назад" в браузере) сюда прилетит POST-запрос.
+     * Если метод action() пустой, статус остается null. Keycloak видит null и моментально бросает
+     * внутреннюю ошибку сервера — AuthenticationFlowException("Authenticator did not set flow status")
+     * Так что здесь, просто передаем управление следующему шагу Alternative.
+     */
+    override fun action(context: AuthenticationFlowContext) {
+        logger.warn(">>>> TrustedDeviceAuthenticator received an unexpected action submit. Skipping to next.")
+        context.attempted()
+    }
+
 
     private fun isDeviceTrusted(user: UserModel, fingerprintToCheck: String): Boolean {
         return user.credentialManager()
@@ -79,8 +91,6 @@ class TrustedDeviceAuthenticator(private val session: KeycloakSession) : Authent
                 }
             }
     }
-
-    override fun action(context: AuthenticationFlowContext) {}
 
     override fun requiresUser(): Boolean = true
     override fun configuredFor(session: KeycloakSession, realm: RealmModel, user: UserModel): Boolean = true
