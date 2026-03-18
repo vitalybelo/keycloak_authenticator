@@ -19,11 +19,21 @@
                     <div class="${properties.kcFormOptionsWrapperClass!}">
                         <div class="checkbox">
                             <label>
-                                <input type="checkbox" name="rememberDevice" id="rememberDevice" checked>
+                                <input type="checkbox" name="rememberDevice" id="rememberDevice" <#--checked-->>
                                 ${msg("rememberDeviceLabel")}
                             </label>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <#-- НОВОЕ ПОЛЕ: Ввод кастомного названия устройства -->
+            <div class="${properties.kcFormGroupClass!}">
+                <div class="${properties.kcLabelWrapperClass!}">
+                    <label for="deviceNameInput" class="${properties.kcLabelClass!}">${msg("deviceNameLabel", "Название устройства (необязательно)")}</label>
+                </div>
+                <div class="${properties.kcInputWrapperClass!}">
+                    <input type="text" id="deviceNameInput" name="deviceNameInput" class="${properties.kcInputClass!}" placeholder="${msg("deviceNamePlaceholder", "Например: Мой рабочий ноутбук")}"/>
                 </div>
             </div>
 

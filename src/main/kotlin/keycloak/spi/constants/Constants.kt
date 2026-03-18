@@ -60,7 +60,6 @@ class Constants {
         const val BF_CONFIG_CRITICAL_BLOCK_KEY = "critical_block"
         const val BF_CONFIG_CRITICAL_BLOCK_VALUE = 20L
 
-
         const val UNKNOWN_REALM = "unknown_realm"
         const val UNKNOWN_USER = "unknown_user"
         const val ANONYMOUS = "anonymous"
@@ -91,6 +90,8 @@ class Constants {
         const val TRUSTED_DEVICE_AUTH_SWITCH_VALUE = true
         const val TRUSTED_DEVICE_DELETE_SWITCH_KEY = "trusted_device_delete"
         const val TRUSTED_DEVICE_DELETE_SWITCH_VALUE = false
+        const val TRUSTED_DEVICE_NAME_PATTERN = "dd.MM.yyyy HH:mm:ss"
+        val TRUSTED_DEVICE_NAME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern(TRUSTED_DEVICE_NAME_PATTERN)
 
 
     }

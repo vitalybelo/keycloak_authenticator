@@ -46,10 +46,12 @@ fun AuthenticationFlowContext.clearDeviceCookie() {
 
 /**
  * Проверяет криптографическую подпись токена с использованием активных ключей realm.
- * Возвращает true, если подпись валидна и ключ найден.
+ * @return true, если подпись токена валидна.
  */
-fun TokenVerifier<JsonWebToken>.verifySignature(session: KeycloakSession, realm: RealmModel): Boolean {
-
+fun TokenVerifier<JsonWebToken>.verifySignature(
+    session: KeycloakSession,
+    realm: RealmModel
+): Boolean {
     return try {
         val kid = this.header.keyId
         val algorithm = this.header.algorithm?.name ?: Algorithm.RS256
@@ -63,7 +65,7 @@ fun TokenVerifier<JsonWebToken>.verifySignature(session: KeycloakSession, realm:
         true
 
     } catch (ex: Exception) {
-
+        // вероятнее всего мы словили VerificationException - протух токен или не прошел crypto проверку
         logger.error(">>>> Exception in verification fingerprint: message = ${ex.message}, cause = ${ex.cause}")
         false
     }
