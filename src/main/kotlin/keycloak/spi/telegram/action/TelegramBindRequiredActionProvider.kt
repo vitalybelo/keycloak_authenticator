@@ -5,7 +5,6 @@ import keycloak.spi.utils.getInfinispanWorkCache
 import org.jboss.logging.Logger
 import org.keycloak.authentication.RequiredActionContext
 import org.keycloak.authentication.RequiredActionProvider
-import org.keycloak.connections.infinispan.InfinispanConnectionProvider
 import org.keycloak.models.KeycloakSession
 import java.util.UUID
 

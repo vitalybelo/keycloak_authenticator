@@ -1,7 +1,8 @@
-package keycloak.spi.trusted_device
+package keycloak.spi.trusted_device.remember
 
 import keycloak.spi.constants.Constants
 import org.jboss.logging.Logger
+import org.keycloak.Config
 import org.keycloak.authentication.Authenticator
 import org.keycloak.authentication.AuthenticatorFactory
 import org.keycloak.authentication.ConfigurableAuthenticatorFactory
@@ -15,13 +16,13 @@ class RememberDeviceAuthenticatorFactory : AuthenticatorFactory {
 
     companion object {
         const val PROVIDER_ID = "remember-device-authenticator"
-        val logger = Logger.getLogger(RememberDeviceAuthenticatorFactory::class.java)
+        private val logger = Logger.getLogger(RememberDeviceAuthenticatorFactory::class.java)
     }
 
     override fun create(session: KeycloakSession): Authenticator {
         return RememberDeviceAuthenticator(session)
     }
-    override fun init(config: org.keycloak.Config.Scope?) {}
+    override fun init(config: Config.Scope?) {}
     override fun postInit(factory: KeycloakSessionFactory?) {}
     override fun close() {}
     override fun getId(): String = PROVIDER_ID

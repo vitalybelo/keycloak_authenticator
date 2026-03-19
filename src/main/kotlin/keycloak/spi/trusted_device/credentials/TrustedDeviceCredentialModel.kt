@@ -1,4 +1,4 @@
-package keycloak.spi.trusted_device
+package keycloak.spi.trusted_device.credentials
 
 import keycloak.spi.constants.Constants
 import org.keycloak.credential.CredentialModel
@@ -36,18 +36,7 @@ class TrustedDeviceCredentialModel : CredentialModel() {
 
             return model
         }
-
-        fun CredentialModel.toTrustedDeviceModel(): TrustedDeviceCredentialModel {
-            val model = TrustedDeviceCredentialModel()
-            model.id = this.id
-            model.type = this.type
-            model.createdDate = this.createdDate
-            model.userLabel = this.userLabel
-            model.secretData = this.secretData
-            model.credentialData = this.credentialData
-            return model
-        }
-    }
+   }
 
 
     /**

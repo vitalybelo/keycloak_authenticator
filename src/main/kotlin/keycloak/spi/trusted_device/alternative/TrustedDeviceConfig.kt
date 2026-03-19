@@ -1,4 +1,4 @@
-package keycloak.spi.trusted_device
+package keycloak.spi.trusted_device.alternative
 
 import keycloak.spi.constants.Constants
 import org.jboss.logging.Logger
@@ -23,15 +23,12 @@ class TrustedDeviceConfig(
                 | Trusted Device Config:
                 | -------------------------------
                 | is Enabled = $isSwitchOn
-                | is Force Delete cookie = $isDeleteOn
+                | is Delete Fingerprint = $isDeleteOn
             """.trimIndent())
 
             return TrustedDeviceConfig(isSwitchOn, isDeleteOn)
         }
     }
-
-
-
 }
 
 

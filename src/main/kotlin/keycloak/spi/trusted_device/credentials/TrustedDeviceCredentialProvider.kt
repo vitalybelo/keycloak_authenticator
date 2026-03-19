@@ -1,6 +1,6 @@
-package keycloak.spi.trusted_device
+package keycloak.spi.trusted_device.credentials
 
-import keycloak.spi.trusted_device.TrustedDeviceCredentialModel.Companion.toTrustedDeviceModel
+import keycloak.spi.trusted_device.toTrustedDeviceModel
 import org.keycloak.credential.*
 import org.keycloak.models.KeycloakSession
 import org.keycloak.models.RealmModel

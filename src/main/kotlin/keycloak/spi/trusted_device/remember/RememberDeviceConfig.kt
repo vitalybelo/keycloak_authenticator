@@ -1,4 +1,4 @@
-package keycloak.spi.trusted_device
+package keycloak.spi.trusted_device.remember
 
 import keycloak.spi.constants.Constants
 import org.jboss.logging.Logger
@@ -9,7 +9,6 @@ class RememberDeviceConfig(
     val isSwitchOn: Boolean,
     val cookieTtlDays: Long,
     val isRecoveryCredential: Boolean
-
 ) {
 
     companion object {

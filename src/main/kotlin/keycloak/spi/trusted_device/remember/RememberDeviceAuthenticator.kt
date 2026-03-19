@@ -1,8 +1,13 @@
-package keycloak.spi.trusted_device
+package keycloak.spi.trusted_device.remember
 
 import jakarta.ws.rs.core.NewCookie
 import keycloak.spi.constants.Constants
-import keycloak.spi.trusted_device.TrustedDeviceCredentialModel.Companion.toTrustedDeviceModel
+import keycloak.spi.trusted_device.credentials.TrustedDeviceCredentialModel
+import keycloak.spi.trusted_device.clearDeviceCookie
+import keycloak.spi.trusted_device.cookie
+import keycloak.spi.trusted_device.getCookieName
+import keycloak.spi.trusted_device.toTrustedDeviceModel
+import keycloak.spi.trusted_device.verifySignature
 import org.jboss.logging.Logger
 import org.keycloak.TokenVerifier
 import org.keycloak.authentication.AuthenticationFlowContext
@@ -114,7 +119,8 @@ class RememberDeviceAuthenticator(
             if (existingDevice == null) {
 
                 fingerprint = UUID.randomUUID().toString()
-                val credentialModel = TrustedDeviceCredentialModel.create(fingerprint, deviceName)
+                val credentialModel =
+                    TrustedDeviceCredentialModel.create(fingerprint, deviceName)
                 credentialManager.createStoredCredential(credentialModel)
                 logger.debug(">>>> Created new trusted device: $deviceName")
             } else {

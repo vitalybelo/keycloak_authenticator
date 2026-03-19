@@ -93,6 +93,8 @@ class Constants {
         const val TRUSTED_DEVICE_DELETE_SWITCH_VALUE = false
         const val TRUSTED_DEVICE_NAME_PATTERN = "dd.MM.yyyy HH:mm:ss"
         val TRUSTED_DEVICE_NAME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern(TRUSTED_DEVICE_NAME_PATTERN)
+        const val TRUSTED_DEVICE_CREDENTIAL_TYPE = "trusted-device"
+
 
 
     }

@@ -32,6 +32,14 @@ class TelegramResourceProvider(private val session: KeycloakSession) : RealmReso
     override fun getResource(): Any = this
 
 
+    /**
+     * Это endpoint дергает форма привязки к телеграм, там есть скрипт, который раз в секунду шлёт pulling
+     * запросы для понимания - выполнена привязка или нет. Сама привязка приходит на "webhook", тот в свою
+     * очередь кладет в кэш запись о полученном chat_id, а здесь мы дергаем этот кэш, чтобы получить ожидаемые
+     * идентификатор. Если, получает chat_id из кэша, сигнализируем в скрипт из ftl "status": "linked" - тот
+     * перестает отправлять pulling запросы, делает сам submit формы. Форма закрывается и всё.
+     * @param token ключ map, по которому в кэш складывается chat_id для пользователя.
+     */
     @GET
     @Path("status/{token}")
     @Produces(MediaType.APPLICATION_JSON)

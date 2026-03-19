@@ -1,7 +1,8 @@
-package keycloak.spi.trusted_device
+package keycloak.spi.trusted_device.alternative
 
 import keycloak.spi.constants.Constants
 import org.jboss.logging.Logger
+import org.keycloak.Config
 import org.keycloak.authentication.Authenticator
 import org.keycloak.authentication.AuthenticatorFactory
 import org.keycloak.models.AuthenticationExecutionModel
@@ -18,10 +19,10 @@ class TrustedDeviceAuthenticatorFactory : AuthenticatorFactory {
     }
 
     override fun create(session: KeycloakSession): Authenticator {
-        return TrustedDeviceAuthenticator(session)
+        return TrustedDeviceAuthenticator()
     }
 
-    override fun init(config: org.keycloak.Config.Scope?) {}
+    override fun init(config: Config.Scope?) {}
     override fun postInit(factory: KeycloakSessionFactory?) {}
     override fun close() {}
     override fun getId(): String = PROVIDER_ID
@@ -52,9 +53,9 @@ class TrustedDeviceAuthenticatorFactory : AuthenticatorFactory {
 
             .property()
             .name(Constants.TRUSTED_DEVICE_DELETE_SWITCH_KEY)
-            .label("Hard delete enabled")
+            .label("Delete fingerprint enabled")
             .type(ProviderConfigProperty.BOOLEAN_TYPE)
-            .helpText("Если \"ON\" - принудительно будут удаляться все fingerprints из cookie при входе пользователя, credentials сохранятся")
+            .helpText("Если \"ON\" - принудительно будет удаляться fingerprint устройства из cookie и credential при входе пользователя")
             .defaultValue(Constants.TRUSTED_DEVICE_DELETE_SWITCH_VALUE)
             .add()
 

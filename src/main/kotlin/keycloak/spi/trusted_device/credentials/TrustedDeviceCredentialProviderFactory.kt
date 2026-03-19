@@ -1,4 +1,4 @@
-package keycloak.spi.trusted_device
+package keycloak.spi.trusted_device.credentials
 
 import org.keycloak.credential.CredentialProviderFactory
 import org.keycloak.models.KeycloakSession
