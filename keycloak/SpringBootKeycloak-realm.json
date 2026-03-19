@@ -2433,8 +2433,8 @@
     } ]
   }, {
     "id" : "a6fdacc7-451d-46cf-bfdc-db8a81dbad6d",
-    "alias" : "Browser - Telegram 2FA - Trusted Device",
-    "description" : "browser based authentication",
+    "alias" : "Browser - Telegram 2FA - Trusted Device ALTERNATIVE",
+    "description" : "browser based authentication alternative",
     "providerId" : "basic-flow",
     "topLevel" : true,
     "builtIn" : false,
@@ -2465,6 +2465,43 @@
       "priority" : 30,
       "autheticatorFlow" : true,
       "flowAlias" : "Browser Advanced Flow",
+      "userSetupAllowed" : false
+    } ]
+  }, {
+    "id" : "b254d857-c18f-471e-aad7-b05e46d4f307",
+    "alias" : "Browser - Telegram 2FA - Trusted Device CONDITIONAL",
+    "description" : "browser based authentication conditional",
+    "providerId" : "basic-flow",
+    "topLevel" : true,
+    "builtIn" : false,
+    "authenticationExecutions" : [ {
+      "authenticator" : "auth-cookie",
+      "authenticatorFlow" : false,
+      "requirement" : "ALTERNATIVE",
+      "priority" : 10,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    }, {
+      "authenticator" : "auth-spnego",
+      "authenticatorFlow" : false,
+      "requirement" : "ALTERNATIVE",
+      "priority" : 20,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    }, {
+      "authenticator" : "identity-provider-redirector",
+      "authenticatorFlow" : false,
+      "requirement" : "ALTERNATIVE",
+      "priority" : 25,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    }, {
+      "authenticatorConfig" : "Username Password - Telegram 2FA - Trusted Device Conditional",
+      "authenticatorFlow" : true,
+      "requirement" : "ALTERNATIVE",
+      "priority" : 26,
+      "autheticatorFlow" : true,
+      "flowAlias" : "Username Password - Trusted Device - Telegram 2FA - Conditional",
       "userSetupAllowed" : false
     } ]
   }, {
@@ -2557,7 +2594,7 @@
       "requirement" : "REQUIRED",
       "priority" : 11,
       "autheticatorFlow" : true,
-      "flowAlias" : "Trusted Device - Telegram 2FA",
+      "flowAlias" : "Trusted Device - Telegram 2FA - Alternative",
       "userSetupAllowed" : false
     }, {
       "authenticatorConfig" : "Remember Device Form config uno",
@@ -2606,203 +2643,6 @@
       "priority" : 35,
       "autheticatorFlow" : true,
       "flowAlias" : "Forms: Username - Password - OTP",
-      "userSetupAllowed" : false
-    } ]
-  }, {
-    "id" : "376d8ffa-b1c6-4ace-a3b8-fa7b3c19e00f",
-    "alias" : "Browser Username Password R38",
-    "description" : "browser based authentication",
-    "providerId" : "basic-flow",
-    "topLevel" : true,
-    "builtIn" : false,
-    "authenticationExecutions" : [ {
-      "authenticatorConfig" : "Browser Username Password R38 Cookie config",
-      "authenticator" : "auth-cookie",
-      "authenticatorFlow" : false,
-      "requirement" : "ALTERNATIVE",
-      "priority" : 26,
-      "autheticatorFlow" : false,
-      "userSetupAllowed" : false
-    }, {
-      "authenticatorConfig" : "Browser Username Password R38 Kerberos config",
-      "authenticator" : "auth-spnego",
-      "authenticatorFlow" : false,
-      "requirement" : "ALTERNATIVE",
-      "priority" : 27,
-      "autheticatorFlow" : false,
-      "userSetupAllowed" : false
-    }, {
-      "authenticatorConfig" : "Browser Username Password R38 Identity Provider Redirector config",
-      "authenticator" : "identity-provider-redirector",
-      "authenticatorFlow" : false,
-      "requirement" : "ALTERNATIVE",
-      "priority" : 34,
-      "autheticatorFlow" : false,
-      "userSetupAllowed" : false
-    }, {
-      "authenticatorConfig" : "Browser Username Password R38 Username - Password - OTP - Form config",
-      "authenticatorFlow" : true,
-      "requirement" : "ALTERNATIVE",
-      "priority" : 35,
-      "autheticatorFlow" : true,
-      "flowAlias" : "Browser Username Password R38 Forms: Username - Password - OTP",
-      "userSetupAllowed" : false
-    } ]
-  }, {
-    "id" : "0206539c-161b-4c06-8776-e8dcea1d1ca0",
-    "alias" : "Browser Username Password R38 Browser 2FA Application",
-    "description" : "",
-    "providerId" : "basic-flow",
-    "topLevel" : false,
-    "builtIn" : false,
-    "authenticationExecutions" : [ {
-      "authenticatorConfig" : "Browser Username Password R38 Condition - check user attribute config Application",
-      "authenticator" : "check_attribute_condition",
-      "authenticatorFlow" : false,
-      "requirement" : "REQUIRED",
-      "priority" : 0,
-      "autheticatorFlow" : false,
-      "userSetupAllowed" : false
-    }, {
-      "authenticator" : "auth-otp-form",
-      "authenticatorFlow" : false,
-      "requirement" : "REQUIRED",
-      "priority" : 2,
-      "autheticatorFlow" : false,
-      "userSetupAllowed" : false
-    } ]
-  }, {
-    "id" : "2b0fd691-4402-466d-bd94-73cfe1f2a3d7",
-    "alias" : "Browser Username Password R38 Browser 2FA SMS ",
-    "description" : "",
-    "providerId" : "basic-flow",
-    "topLevel" : false,
-    "builtIn" : false,
-    "authenticationExecutions" : [ {
-      "authenticatorConfig" : "Browser Username Password R38 Condition - check user attribute config",
-      "authenticator" : "check_attribute_condition",
-      "authenticatorFlow" : false,
-      "requirement" : "REQUIRED",
-      "priority" : 3,
-      "autheticatorFlow" : false,
-      "userSetupAllowed" : false
-    }, {
-      "authenticatorConfig" : "Browser Username Password R38 2FA SMS Authentication config",
-      "authenticator" : "sms_2fa_authentication",
-      "authenticatorFlow" : false,
-      "requirement" : "REQUIRED",
-      "priority" : 4,
-      "autheticatorFlow" : false,
-      "userSetupAllowed" : false
-    } ]
-  }, {
-    "id" : "32a55149-c9db-4eb5-b529-f245aefd281f",
-    "alias" : "Browser Username Password R38 Browser 2FA Telegram",
-    "description" : "",
-    "providerId" : "basic-flow",
-    "topLevel" : false,
-    "builtIn" : false,
-    "authenticationExecutions" : [ {
-      "authenticatorConfig" : "Browser Username Password R38 Condition - check user attribute config Telegram",
-      "authenticator" : "check_attribute_condition",
-      "authenticatorFlow" : false,
-      "requirement" : "REQUIRED",
-      "priority" : 0,
-      "autheticatorFlow" : false,
-      "userSetupAllowed" : false
-    }, {
-      "authenticatorConfig" : "Browser Username Password R38 Telegram 2FA config",
-      "authenticator" : "telegram-authenticator",
-      "authenticatorFlow" : false,
-      "requirement" : "REQUIRED",
-      "priority" : 1,
-      "autheticatorFlow" : false,
-      "userSetupAllowed" : false
-    } ]
-  }, {
-    "id" : "19dee339-29ac-4866-a4c8-bed6ae6cc45d",
-    "alias" : "Browser Username Password R38 Forms: Username - Password - OTP",
-    "description" : "",
-    "providerId" : "basic-flow",
-    "topLevel" : false,
-    "builtIn" : false,
-    "authenticationExecutions" : [ {
-      "authenticatorConfig" : "Browser Username Password R38 Username Form config",
-      "authenticator" : "auth-username-form",
-      "authenticatorFlow" : false,
-      "requirement" : "REQUIRED",
-      "priority" : 2,
-      "autheticatorFlow" : false,
-      "userSetupAllowed" : false
-    }, {
-      "authenticatorConfig" : "Browser Username Password R38 Username Login Limiter config",
-      "authenticator" : "username_blocking_execution",
-      "authenticatorFlow" : false,
-      "requirement" : "REQUIRED",
-      "priority" : 10,
-      "autheticatorFlow" : false,
-      "userSetupAllowed" : false
-    }, {
-      "authenticatorConfig" : "Browser Username Password R38 Password Form and 2FA conditional Forms config",
-      "authenticatorFlow" : true,
-      "requirement" : "CONDITIONAL",
-      "priority" : 11,
-      "autheticatorFlow" : true,
-      "flowAlias" : "Browser Username Password R38 Password Form and 2FA conditional Forms",
-      "userSetupAllowed" : false
-    } ]
-  }, {
-    "id" : "f8b97336-3392-423f-831c-2a142ec60fd6",
-    "alias" : "Browser Username Password R38 Password Form and 2FA conditional Forms",
-    "description" : "",
-    "providerId" : "basic-flow",
-    "topLevel" : false,
-    "builtIn" : false,
-    "authenticationExecutions" : [ {
-      "authenticatorConfig" : "Browser Username Password R38 Condition - user role config",
-      "authenticator" : "conditional-user-role",
-      "authenticatorFlow" : false,
-      "requirement" : "REQUIRED",
-      "priority" : 1,
-      "autheticatorFlow" : false,
-      "userSetupAllowed" : false
-    }, {
-      "authenticatorConfig" : "Browser Username Password R38 Password Form Brute Force Locker configuration",
-      "authenticator" : "password_brute_force_locker",
-      "authenticatorFlow" : false,
-      "requirement" : "REQUIRED",
-      "priority" : 2,
-      "autheticatorFlow" : false,
-      "userSetupAllowed" : false
-    }, {
-      "authenticatorConfig" : "Browser Username Password R38 Enter Time Attribute Logic config",
-      "authenticator" : "enter_timer_logics",
-      "authenticatorFlow" : false,
-      "requirement" : "REQUIRED",
-      "priority" : 7,
-      "autheticatorFlow" : false,
-      "userSetupAllowed" : false
-    }, {
-      "authenticatorConfig" : "Browser Username Password R38 Browser 2FA SMS config",
-      "authenticatorFlow" : true,
-      "requirement" : "CONDITIONAL",
-      "priority" : 8,
-      "autheticatorFlow" : true,
-      "flowAlias" : "Browser Username Password R38 Browser 2FA SMS ",
-      "userSetupAllowed" : false
-    }, {
-      "authenticatorFlow" : true,
-      "requirement" : "CONDITIONAL",
-      "priority" : 9,
-      "autheticatorFlow" : true,
-      "flowAlias" : "Browser Username Password R38 Browser 2FA Application",
-      "userSetupAllowed" : false
-    }, {
-      "authenticatorFlow" : true,
-      "requirement" : "CONDITIONAL",
-      "priority" : 10,
-      "autheticatorFlow" : true,
-      "flowAlias" : "Browser Username Password R38 Browser 2FA Telegram",
       "userSetupAllowed" : false
     } ]
   }, {
@@ -2981,7 +2821,7 @@
     } ]
   }, {
     "id" : "7480f156-6ab5-4dfb-affb-dbeda4f95b75",
-    "alias" : "Trusted Device - Telegram 2FA",
+    "alias" : "Trusted Device - Telegram 2FA - Alternative",
     "description" : "",
     "providerId" : "basic-flow",
     "topLevel" : false,
@@ -2999,6 +2839,29 @@
       "authenticator" : "telegram-authenticator",
       "authenticatorFlow" : false,
       "requirement" : "ALTERNATIVE",
+      "priority" : 1,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    } ]
+  }, {
+    "id" : "ef13ac5c-dfbd-46de-87cf-55f8d66096fa",
+    "alias" : "Trusted Device - Telegram 2FA - Conditional",
+    "description" : "",
+    "providerId" : "basic-flow",
+    "topLevel" : false,
+    "builtIn" : false,
+    "authenticationExecutions" : [ {
+      "authenticatorConfig" : "Condition - Device is NOT Trusted config",
+      "authenticator" : "conditional-trusted-device",
+      "authenticatorFlow" : false,
+      "requirement" : "REQUIRED",
+      "priority" : 0,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    }, {
+      "authenticator" : "telegram-authenticator",
+      "authenticatorFlow" : false,
+      "requirement" : "REQUIRED",
       "priority" : 1,
       "autheticatorFlow" : false,
       "userSetupAllowed" : false
@@ -3024,6 +2887,36 @@
       "priority" : 20,
       "autheticatorFlow" : true,
       "flowAlias" : "Handle Existing Account",
+      "userSetupAllowed" : false
+    } ]
+  }, {
+    "id" : "62a218fd-201f-4f16-853e-6128801ce2ca",
+    "alias" : "Username Password - Trusted Device - Telegram 2FA - Conditional",
+    "description" : "",
+    "providerId" : "basic-flow",
+    "topLevel" : false,
+    "builtIn" : false,
+    "authenticationExecutions" : [ {
+      "authenticator" : "auth-username-password-form",
+      "authenticatorFlow" : false,
+      "requirement" : "REQUIRED",
+      "priority" : 0,
+      "autheticatorFlow" : false,
+      "userSetupAllowed" : false
+    }, {
+      "authenticatorFlow" : true,
+      "requirement" : "CONDITIONAL",
+      "priority" : 1,
+      "autheticatorFlow" : true,
+      "flowAlias" : "Trusted Device - Telegram 2FA - Conditional",
+      "userSetupAllowed" : false
+    }, {
+      "authenticatorConfig" : "Remember Device Form config Conditional",
+      "authenticator" : "remember-device-authenticator",
+      "authenticatorFlow" : false,
+      "requirement" : "REQUIRED",
+      "priority" : 2,
+      "autheticatorFlow" : false,
       "userSetupAllowed" : false
     } ]
   }, {
@@ -3329,111 +3222,11 @@
     "alias" : "Browser 2FA SMS config",
     "config" : { }
   }, {
-    "id" : "9b0bde60-29c8-47c9-9399-949049fc3871",
-    "alias" : "Browser Username Password R38 2FA SMS Authentication config",
+    "id" : "04a49f99-b38e-4cb4-96dc-a173cd5a39c9",
+    "alias" : "Condition - Device is NOT Trusted config",
     "config" : {
-      "sms_stub_code" : "1111",
-      "sms_code_ttl" : "60",
-      "sms_stub_length" : "4",
-      "ttl" : "30",
-      "sms_stub_switch" : "false"
-    }
-  }, {
-    "id" : "5ab93056-e79f-4e53-9ff1-0414c477da7d",
-    "alias" : "Browser Username Password R38 Browser 2FA SMS config",
-    "config" : { }
-  }, {
-    "id" : "14791c9d-3839-4508-bad7-6156e810c693",
-    "alias" : "Browser Username Password R38 Condition - check user attribute config",
-    "config" : {
-      "attribute_name" : "required_2FA",
-      "attribute_value" : "SMS",
-      "native_enabled" : "false",
-      "attribute_groups_enabled" : "true"
-    }
-  }, {
-    "id" : "69e8d480-5255-441a-8bee-f241f0a72c08",
-    "alias" : "Browser Username Password R38 Condition - check user attribute config Application",
-    "config" : {
-      "attribute_name" : "required_2FA",
-      "attribute_value" : "APP",
-      "native_enabled" : "false",
-      "attribute_groups_enabled" : "true"
-    }
-  }, {
-    "id" : "d625ee46-ae4e-4c96-9252-a9918c1d5592",
-    "alias" : "Browser Username Password R38 Condition - check user attribute config Telegram",
-    "config" : {
-      "attribute_name" : "required_2FA",
-      "attribute_value" : "TEL",
-      "native_enabled" : "false",
-      "attribute_groups_enabled" : "true"
-    }
-  }, {
-    "id" : "9014d616-0f8d-4964-841e-60540b492d0b",
-    "alias" : "Browser Username Password R38 Condition - user role config",
-    "config" : {
-      "condUserRole" : "ADMIN",
-      "negate" : "true"
-    }
-  }, {
-    "id" : "e5c1fba8-d9f2-4c97-8599-f7ee6f7c118b",
-    "alias" : "Browser Username Password R38 Cookie config",
-    "config" : { }
-  }, {
-    "id" : "d905acca-7d9f-49ea-a518-beac220f86a6",
-    "alias" : "Browser Username Password R38 Enter Time Attribute Logic config",
-    "config" : {
-      "30" : "30",
-      "enter_time_switch" : "true"
-    }
-  }, {
-    "id" : "fd5ce4d6-baa1-413f-9930-82b585c594d0",
-    "alias" : "Browser Username Password R38 Identity Provider Redirector config",
-    "config" : { }
-  }, {
-    "id" : "77f4727e-3687-4027-bf13-4006f089f6d8",
-    "alias" : "Browser Username Password R38 Kerberos config",
-    "config" : { }
-  }, {
-    "id" : "4ef91bb9-bba8-4536-ab6c-c42ca516ce17",
-    "alias" : "Browser Username Password R38 Password Form Brute Force Locker configuration",
-    "config" : {
-      "block_minutes" : "10",
-      "quick_login_interval" : "500",
-      "brute_force_switch" : "true",
-      "max_failures" : "5",
-      "quick_block_minutes" : "1",
-      "reset_minutes" : "60"
-    }
-  }, {
-    "id" : "0083c500-c669-4829-ad00-42dd7f393f6a",
-    "alias" : "Browser Username Password R38 Password Form and 2FA conditional Forms config",
-    "config" : { }
-  }, {
-    "id" : "41ff32ac-0688-40e5-b3f1-046da92aade5",
-    "alias" : "Browser Username Password R38 Telegram 2FA config",
-    "config" : {
-      "telegram_code_ttl" : "30",
-      "telegram_switch" : "true",
-      "telegram_code_length" : "6"
-    }
-  }, {
-    "id" : "d5d1a3ca-eae3-4703-b553-18b7419cc5cd",
-    "alias" : "Browser Username Password R38 Username - Password - OTP - Form config",
-    "config" : { }
-  }, {
-    "id" : "6e6f35e4-ecd9-4e6d-952a-1c4fb8819b62",
-    "alias" : "Browser Username Password R38 Username Form config",
-    "config" : { }
-  }, {
-    "id" : "92242674-8ac2-4306-be65-715427a14e6e",
-    "alias" : "Browser Username Password R38 Username Login Limiter config",
-    "config" : {
-      "Check_toggle" : "true",
-      "blocking_username_list" : "nikola",
-      "Username_prohibited" : "nikola",
-      "blocking_switch" : "true"
+      "trusted_device_switch" : "true",
+      "trusted_device_delete" : "false"
     }
   }, {
     "id" : "43ac6af3-417f-4794-a7e8-004d1ac15526",
@@ -3507,6 +3300,14 @@
     "alias" : "Password Form and 2FA conditional Forms config",
     "config" : { }
   }, {
+    "id" : "b17e0b85-062c-48dc-aaad-0b7945b563d5",
+    "alias" : "Remember Device Form config Conditional",
+    "config" : {
+      "remember_recovery_swith" : "true",
+      "remember_switch" : "true",
+      "remember_cookie_ttl" : "30"
+    }
+  }, {
     "id" : "bb8ae1d0-b96f-425d-8d4a-45b4450f3248",
     "alias" : "Remember Device Form config uno",
     "config" : {
@@ -3543,7 +3344,7 @@
     "alias" : "Trusted Device Checker config",
     "config" : {
       "trusted_device_switch" : "true",
-      "trusted_device_delete" : "true"
+      "trusted_device_delete" : "false"
     }
   }, {
     "id" : "fbe05c56-7e2b-49a7-aaad-bd237efac402",
@@ -3562,6 +3363,10 @@
       "Username_prohibited" : "nikola",
       "blocking_switch" : "true"
     }
+  }, {
+    "id" : "d6e9058e-e776-452b-8515-732ab264c1d3",
+    "alias" : "Username Password - Telegram 2FA - Trusted Device Conditional",
+    "config" : { }
   }, {
     "id" : "886bfcb6-8c52-43ca-a5fd-cfea7961ffd2",
     "alias" : "create unique user config",
@@ -3672,7 +3477,7 @@
     "priority" : 1001,
     "config" : { }
   } ],
-  "browserFlow" : "Browser - Telegram 2FA - Trusted Device",
+  "browserFlow" : "Browser - Telegram 2FA - Trusted Device ALTERNATIVE",
   "registrationFlow" : "registration",
   "directGrantFlow" : "direct grant",
   "resetCredentialsFlow" : "reset credentials",
