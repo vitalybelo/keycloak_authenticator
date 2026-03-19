@@ -15,10 +15,10 @@
                 </div>
             </div>
 
-            <div class="${properties.kcFormGroupClass!} ${properties.kcFormSettingClass!}">
+            <div class="${properties.kcFormGroupClass!} ${properties.kcFormSettingClass!}" style="margin-top: 20px;">
                 <div id="kc-form-buttons" class="${properties.kcFormButtonsClass!}">
                     <input class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}"
-                           type="submit" value=${msg("TelegramEnterText")!"Войти"}>
+                           type="submit" value="${msg('TelegramEnterText')!'Войти'}">
                 </div>
             </div>
         </form>
