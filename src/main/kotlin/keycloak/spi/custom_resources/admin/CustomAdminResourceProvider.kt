@@ -24,7 +24,7 @@ class CustomAdminResourceProvider: AdminRealmResourceProvider {
             realm,
             adminPermissionEvaluator,
             adminEventBuilder,
-            EventBuilder(realm, session, session.context.connection),
+            EventBuilder(realm, session, session.context.connection)
         )
     }
 

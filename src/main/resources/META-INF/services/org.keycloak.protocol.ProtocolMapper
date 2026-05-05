@@ -1,1 +1,2 @@
 keycloak.spi.token_mapper.BlockLockedUserProtocolMapper
+keycloak.spi.custom_session.CustomUserSessionMapper

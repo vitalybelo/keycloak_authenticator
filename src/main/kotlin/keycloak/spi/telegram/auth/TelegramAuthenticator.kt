@@ -9,6 +9,8 @@ import org.keycloak.common.util.SecretGenerator
 import org.keycloak.models.KeycloakSession
 import org.keycloak.models.RealmModel
 import org.keycloak.models.UserModel
+import java.net.InetSocketAddress
+import java.net.ProxySelector
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -25,7 +27,10 @@ class TelegramAuthenticator : Authenticator {
         private const val ONE_SECOND = 1000L
     }
     private val botSecretToken = Constants.TELEGRAM_BOT_TOKEN
-    private val client = HttpClient.newHttpClient()
+    private val client = HttpClient.newBuilder()
+        .proxy(ProxySelector.of(InetSocketAddress("127.0.0.1", 12334)))
+        .build()
+    // TODO - убрать прокси для промышленного применения = HttpClient.newHttpClient()
 
     /**
      * Вначале генерится шестизначный секретный код для отправки в телеграм. Код сохраняется в атрибутах

@@ -36,12 +36,12 @@ class BlockLockedUserProtocolMapper: AbstractOIDCProtocolMapper(), OIDCAccessTok
         mappingModel: ProtocolMapperModel,
         session: KeycloakSession,
         userSession: UserSessionModel,
-        clientSessionCtx: ClientSessionContext
+        clientSessionContext: ClientSessionContext
 
     ): AccessToken {
 
         checkLockoutAndKillSessions(session, userSession)
-        return super.transformAccessToken(token, mappingModel, session, userSession, clientSessionCtx)
+        return super.transformAccessToken(token, mappingModel, session, userSession, clientSessionContext)
     }
 
 
