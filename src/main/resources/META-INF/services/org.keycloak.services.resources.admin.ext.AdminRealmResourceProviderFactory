@@ -1,1 +1,2 @@
 keycloak.spi.custom_resources.admin.CustomAdminResourceProviderFactory
+keycloak.spi.custom_resources.migration.BranchMigrationResourceProviderFactory
