@@ -44,10 +44,11 @@
             <scope>provided</scope>
         </dependency>
 
+        <!--suppress VulnerableLibrariesLocal -->
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-model-infinispan</artifactId>
-            <version>26.5.2</version>
+            <version>26.6.3</version>
             <scope>provided</scope>
         </dependency>
 
@@ -57,6 +58,7 @@
             <version>${jackson.version}</version>
         </dependency>
 
+        <!--suppress VulnerableLibrariesLocal -->
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
@@ -143,6 +145,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.1</version>
                 <configuration>
                     <source>16</source>
                     <target>16</target>

@@ -7,3 +7,5 @@ keycloak.spi.telegram.auth.TelegramAuthenticatorFactory
 keycloak.spi.trusted_device.alternative.TrustedDeviceAuthenticatorFactory
 keycloak.spi.trusted_device.remember.RememberDeviceAuthenticatorFactory
 keycloak.spi.trusted_device.conditional.ConditionalTrustedDeviceAuthenticatorFactory
+keycloak.spi.age_restriction.AgeRestrictionAuthenticatorFactory
+keycloak.spi.fincert_blocks.AmlBlockAuthenticatorFactory
